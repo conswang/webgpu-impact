@@ -1,5 +1,5 @@
 import shader from "./shaders/shaders.wgsl"
-import { TriangleMesh } from "./types/triangleMesh";
+import { Mesh } from "./types/mesh";
 import { Camera } from "./types/camera";
 import { mat4 } from "gl-matrix"
 
@@ -18,7 +18,7 @@ export class Renderer {
     pipeline!: GPURenderPipeline;
 
     // Assets
-    triangleMesh!: TriangleMesh;
+    mesh!: Mesh;
     camera: Camera;
 
     constructor(canvas: HTMLCanvasElement) {
@@ -94,7 +94,7 @@ export class Renderer {
                     code: shader
                 }),
                 entryPoint: "vs_main",
-                buffers: [this.triangleMesh.bufferLayout]
+                buffers: [this.mesh.bufferLayout]
             },
             fragment: {
                 module: this.device.createShaderModule({
@@ -112,7 +112,7 @@ export class Renderer {
     }
 
     createAssets() {
-        this.triangleMesh = new TriangleMesh(this.device);
+        this.mesh = new Mesh(this.device);
     }
 
     render = () => {
@@ -133,12 +133,12 @@ export class Renderer {
         })
         renderPass.setPipeline(this.pipeline);
         renderPass.setBindGroup(0, this.bindGroup);
-        renderPass.setVertexBuffer(0, this.triangleMesh.buffer);
-        renderPass.draw(3, 1, 0, 0);
+        renderPass.setVertexBuffer(0, this.mesh.buffer);
+        renderPass.draw(this.mesh.vertCount, 1, 0, 0);
         renderPass.end();
 
         this.device.queue.submit([commandEncoder.finish()]);
 
-        requestAnimationFrame(this.render);
+        // requestAnimationFrame(this.render);
     }
 }
