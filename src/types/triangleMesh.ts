@@ -21,7 +21,7 @@ export class TriangleMesh {
         }
 
         this.buffer = device.createBuffer(descriptor);
-        new Float32Array(this.buffer.getMappedRange()).set(verts);
+        new Float32Array(this.buffer.getMappedRange()).set(this.vertDataVBO);
         this.buffer.unmap();
 
         this.bufferLayout = {
