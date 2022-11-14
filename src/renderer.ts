@@ -28,7 +28,7 @@ export class Renderer {
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
         this.camera = new Camera(Math.PI / 4, canvas.width, canvas.height, 
-            0.1, 10.0, [-2, 0, 2], [0, 0, 0], [0, 0, 1]);
+            0.1, 10.0, [-5, 0, 2], [0, 0, 0], [0, 0, 1]);
     }
 
     async initialize() {
@@ -111,6 +111,11 @@ export class Renderer {
             },
             primitive: {
                 topology: "triangle-list"
+            },
+            depthStencil: {
+                depthWriteEnabled: true,
+                depthCompare: "less",
+                format: "depth24plus"
             }
         });
     }
@@ -121,10 +126,15 @@ export class Renderer {
 
     render = () => {
         // Passing in the transformation matrices to the uniform buffer
-        this.device.queue.writeBuffer(this.uniformBuffer, 0, <ArrayBuffer>this.camera.model());
+        this.device.queue.writeBuffer(this.uniformBuffer, 0, <ArrayBuffer>this.camera.model(this.time));
         this.device.queue.writeBuffer(this.uniformBuffer, 64, <ArrayBuffer>this.camera.view());
         this.device.queue.writeBuffer(this.uniformBuffer, 128, <ArrayBuffer>this.camera.project());
-
+        
+        const depthTexture = this.device.createTexture({
+            size: [this.canvas.clientWidth, this.canvas.clientHeight],
+            format: 'depth24plus',
+            usage: GPUTextureUsage.RENDER_ATTACHMENT
+          });
         const commandEncoder : GPUCommandEncoder = this.device.createCommandEncoder();
         const textureView : GPUTextureView = this.context.getCurrentTexture().createView();
         const renderPass : GPURenderPassEncoder = commandEncoder.beginRenderPass({
@@ -133,13 +143,19 @@ export class Renderer {
                 clearValue : {r : 0.5, g : 0.0, b : 0.25, a : 1.0},
                 loadOp : "clear",
                 storeOp : "store"
-            }]
+            }], 
+            depthStencilAttachment: {
+                view: depthTexture.createView(),
+          
+                depthClearValue: 1.0,
+                depthLoadOp: 'clear',
+                depthStoreOp: 'store',
+              },
         })
         renderPass.setPipeline(this.pipeline);
         renderPass.setBindGroup(0, this.bindGroup);
         renderPass.setVertexBuffer(0, this.mesh.buffer);
-        renderPass.setIndexBuffer(this.mesh.idxBuffer, "uint32");
-        renderPass.drawIndexed(this.mesh.idxCount, 1, 0, 0);
+        renderPass.draw(this.mesh.idxCount, 1, 0, 0);
         renderPass.end();
 
         this.device.queue.submit([commandEncoder.finish()]);

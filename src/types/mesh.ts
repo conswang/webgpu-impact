@@ -8,7 +8,7 @@ interface Vertex {
 
 export class Mesh {
     buffer: GPUBuffer
-    idxBuffer: GPUBuffer
+    // idxBuffer: GPUBuffer
     bufferLayout: GPUVertexBufferLayout
 
     vertCount: number = 0
@@ -21,14 +21,20 @@ export class Mesh {
 
     constructor(device: GPUDevice) {
         // x y r g b
-        let verts : Array<Vertex> = new Array<Vertex>();
-        verts.push({pos: [0.0, -0.5, -0.5], col: [0.0, 1.0, 0.0]});
-        verts.push({pos: [0.0, 0.0, 0.5], col: [1.0, 0.0, 0.0]});
-        verts.push({pos: [0.0, 0.5, -0.5], col: [0.0, 0.0, 1.0]});
-        verts.push({pos: [0.0, 0.25, -1.0], col: [0.0, 1.0, 1.0]});
-        verts.push({pos: [0.0, -0.25, -1.0], col: [1.0, 1.0, 0.0]});
+        // let verts : Array<Vertex> = new Array<Vertex>();
+        // verts.push({pos: [0.0, -0.5, -0.5], col: [0.0, 1.0, 0.0]});
+        // verts.push({pos: [0.0, 0.0, 0.5], col: [1.0, 0.0, 0.0]});
+        // verts.push({pos: [0.0, 0.5, -0.5], col: [0.0, 0.0, 1.0]});
         
-        this.addFace(verts);
+        // this.addFace(verts);
+        this.createCube();
+
+        // let verts2 : Array<Vertex> = new Array<Vertex>();
+        // verts2.push({pos: [0.0, -0.5, -0.5], col: [0.0, 1.0, 0.0]});
+        // verts2.push({pos: [0.0, 0.0, -2.0], col: [1.0, 0.0, 0.0]});
+        // verts2.push({pos: [0.0, 0.5, -0.5], col: [0.0, 0.0, 1.0]});
+
+        // this.addFace(verts2);
 
         this.populateVBO();
 
@@ -44,17 +50,6 @@ export class Mesh {
         new Float32Array(this.buffer.getMappedRange()).set(this.vertDataVBO);
         this.buffer.unmap();
 
-        // Create Index Data VBO
-        const idxUsage: GPUBufferUsageFlags = GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST;
-        const idxDescriptor: GPUBufferDescriptor = {
-            size: this.idxDataVBO.byteLength,
-            usage: idxUsage,
-            mappedAtCreation: true
-        }
-
-        this.idxBuffer = device.createBuffer(idxDescriptor);
-        new Uint32Array(this.idxBuffer.getMappedRange()).set(this.idxDataVBO);
-        this.idxBuffer.unmap();
 
         this.bufferLayout = {
             arrayStride: 24,
@@ -97,40 +92,104 @@ export class Mesh {
 
     populateVBO() {
         var verts : Array<number> = new Array<number>();
-        var indices : Array<number> = new Array<number>();
 
-        // Adding Vertices
-        for (var i = 0; i < this.vertCount; i++){
-            verts.push(this.positions[i][0]);
-            verts.push(this.positions[i][1]);
-            verts.push(this.positions[i][2]);
-            verts.push(this.colors[i][0]);
-            verts.push(this.colors[i][1]);
-            verts.push(this.colors[i][2]);
-        }
-
-        // Adding indices
         for (let i = 0; i < this.faces.length; i++){
             const currFace : Face = this.faces[i];
 
             // Fan out method per face
             for (let j = 0; j < currFace.vertCount - 2; j++){
-                indices.push(0);
-                indices.push(j + 1);
-                indices.push(j + 2);
+                // Vert 0
+                verts.push(this.positions[currFace.verts[0]][0]);
+                verts.push(this.positions[currFace.verts[0]][1]);
+                verts.push(this.positions[currFace.verts[0]][2]);
+                // verts.push(this.colors[currFace.verts[0]][0]);
+                // verts.push(this.colors[currFace.verts[0]][1]);
+                // verts.push(this.colors[currFace.verts[0]][2]);
 
-                console.log("Adding Triangle")
+                verts.push(currFace.color![0]);
+                verts.push(currFace.color![1]);
+                verts.push(currFace.color![2]);
+
+                // Vert j + 1
+                verts.push(this.positions[currFace.verts[j + 1]][0]);
+                verts.push(this.positions[currFace.verts[j + 1]][1]);
+                verts.push(this.positions[currFace.verts[j + 1]][2]);
+                // verts.push(this.colors[currFace.verts[j + 1]][0]);
+                // verts.push(this.colors[currFace.verts[j + 1]][1]);
+                // verts.push(this.colors[currFace.verts[j + 1]][2]);
+                
+                verts.push(currFace.color![0]);
+                verts.push(currFace.color![1]);
+                verts.push(currFace.color![2]);
+                
+                // Vert j + 2
+                verts.push(this.positions[currFace.verts[j + 2]][0]);
+                verts.push(this.positions[currFace.verts[j + 2]][1]);
+                verts.push(this.positions[currFace.verts[j + 2]][2]);
+                // verts.push(this.colors[currFace.verts[j + 2]][0]);
+                // verts.push(this.colors[currFace.verts[j + 2]][1]);
+                // verts.push(this.colors[currFace.verts[j + 2]][2]);
+
+                verts.push(currFace.color![0]);
+                verts.push(currFace.color![1]);
+                verts.push(currFace.color![2]);
+
+                this.idxCount += 3;
+                console.log("Adding Triangle");
                 console.log([0, j + 1, j + 2]);
                 console.log([currFace.verts[0], currFace.verts[j + 1], 
                     currFace.verts[j + 2]]);
             }
         }
 
-
         this.vertDataVBO = new Float32Array(verts);
-        this.idxDataVBO = new Uint32Array(indices);
+        console.log(this.vertCount);
+        console.log(this.idxCount);
+    }
 
-        this.idxCount = indices.length;
+    createCube() {
+        let f0 : Array<Vertex> = new Array<Vertex>();
+        f0.push({pos: [-1.0, -1.0, -1.0], col: [0.0, 1.0, 0.0]});
+        f0.push({pos: [1.0, -1.0, -1.0], col: [1.0, 0.0, 0.0]});
+        f0.push({pos: [1.0, 1.0, -1.0], col: [0.0, 0.0, 1.0]});
+        f0.push({pos: [-1.0, 1.0, -1.0], col: [0.0, 1.0, 1.0]});
+
+        let f1 : Array<Vertex> = new Array<Vertex>();
+        f1.push({pos: [-1.0, -1.0, 1.0], col: [0.0, 1.0, 0.0]});
+        f1.push({pos: [1.0, -1.0, 1.0], col: [1.0, 0.0, 0.0]});
+        f1.push({pos: [1.0, 1.0, 1.0], col: [0.0, 0.0, 1.0]});
+        f1.push({pos: [-1.0, 1.0, 1.0], col: [0.0, 1.0, 1.0]});
+
+        let f2 : Array<Vertex> = new Array<Vertex>();
+        f2.push({pos: [-1.0, -1.0, -1.0], col: [0.0, 1.0, 0.0]});
+        f2.push({pos: [1.0, -1.0, -1.0], col: [1.0, 0.0, 0.0]});
+        f2.push({pos: [1.0, -1.0, 1.0], col: [0.0, 0.0, 1.0]});
+        f2.push({pos: [-1.0, -1.0, 1.0], col: [0.0, 1.0, 1.0]});
+
+        let f3 : Array<Vertex> = new Array<Vertex>();
+        f3.push({pos: [-1.0, 1.0, -1.0], col: [0.0, 1.0, 0.0]});
+        f3.push({pos: [1.0, 1.0, -1.0], col: [1.0, 0.0, 0.0]});
+        f3.push({pos: [1.0, 1.0, 1.0], col: [0.0, 0.0, 1.0]});
+        f3.push({pos: [-1.0, 1.0, 1.0], col: [0.0, 1.0, 1.0]});
+
+        let f4 : Array<Vertex> = new Array<Vertex>();
+        f4.push({pos: [-1.0, -1.0, -1.0], col: [0.0, 1.0, 0.0]});
+        f4.push({pos: [-1.0, 1.0, -1.0], col: [1.0, 0.0, 0.0]});
+        f4.push({pos: [-1.0, 1.0, 1.0], col: [0.0, 0.0, 1.0]});
+        f4.push({pos: [-1.0, -1.0, 1.0], col: [0.0, 1.0, 1.0]});
+
+        let f5 : Array<Vertex> = new Array<Vertex>();
+        f5.push({pos: [1.0, -1.0, -1.0], col: [0.0, 1.0, 0.0]});
+        f5.push({pos: [1.0, 1.0, -1.0], col: [1.0, 0.0, 0.0]});
+        f5.push({pos: [1.0, 1.0, 1.0], col: [0.0, 0.0, 1.0]});
+        f5.push({pos: [1.0, -1.0, 1.0], col: [0.0, 1.0, 1.0]});
+
+        this.addFace(f0, [1.0, 0.0, 0.0]);
+        this.addFace(f1, [0.0, 1.0, 0.0]);
+        this.addFace(f2, [0.0, 0.0, 1.0]);
+        this.addFace(f3, [1.0, 0.0, 1.0]);
+        this.addFace(f4, [1.0, 1.0, 0.0]);
+        this.addFace(f5, [0.0, 1.0, 1.0]);
     }
 }
 
