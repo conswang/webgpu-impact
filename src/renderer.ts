@@ -21,6 +21,10 @@ export class Renderer {
     mesh!: Mesh;
     camera: Camera;
 
+    // Time
+    time: number = 0
+    timeStep: number = 0.01
+
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
         this.camera = new Camera(Math.PI / 4, canvas.width, canvas.height, 
@@ -134,11 +138,14 @@ export class Renderer {
         renderPass.setPipeline(this.pipeline);
         renderPass.setBindGroup(0, this.bindGroup);
         renderPass.setVertexBuffer(0, this.mesh.buffer);
-        renderPass.draw(this.mesh.vertCount, 1, 0, 0);
+        renderPass.setIndexBuffer(this.mesh.idxBuffer, "uint32");
+        renderPass.drawIndexed(this.mesh.idxCount, 1, 0, 0);
         renderPass.end();
 
         this.device.queue.submit([commandEncoder.finish()]);
 
-        // requestAnimationFrame(this.render);
+        requestAnimationFrame(this.render);
+
+        this.time += this.timeStep;
     }
 }
