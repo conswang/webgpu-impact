@@ -15,7 +15,7 @@ export class Camera {
 
     constructor(fovy: number, w: number, h: number, nearClip: number,
         farClip: number, eye: vec3, ref: vec3, up: vec3) {
-
+        
         this.fovy = fovy;
         this.aspect = vec2.fromValues(w, h);
         this.nearClip = nearClip;
@@ -24,7 +24,8 @@ export class Camera {
         vec3.copy(this.eye, eye);
         vec3.copy(this.ref, ref);
         vec3.copy(this.up, up);
-
+        vec3.normalize(this.up, this.up);
+        
         vec3.subtract(this.look, ref, eye);
         vec3.normalize(this.look, this.look);
 
@@ -46,9 +47,9 @@ export class Camera {
     }
 
     // Model matrix pending the implementation of a rotation model
-    model() : mat4 {
+    model(val: number) : mat4 {
         var model : mat4 = mat4.create();
-        mat4.rotate(model, model, 0.0, [0, 0, 1]);
+        mat4.rotate(model, model, val, [0, 0, 1]);
         return model;
     }
 }

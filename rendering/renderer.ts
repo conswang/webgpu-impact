@@ -1,11 +1,11 @@
 import shader from "./shaders/shaders.wgsl"
-import { TriangleMesh } from "./types/triangleMesh";
+import { Mesh } from "./types/mesh";
 import { Camera } from "./types/camera";
 import { mat4 } from "gl-matrix"
 
 export class Renderer {
     canvas: HTMLCanvasElement;
-
+    
     // Device/Context objects
     adapter!: GPUAdapter; 
     device!: GPUDevice;
@@ -18,13 +18,17 @@ export class Renderer {
     pipeline!: GPURenderPipeline;
 
     // Assets
-    triangleMesh!: TriangleMesh;
+    mesh!: Mesh;
     camera: Camera;
+
+    // Time
+    time: number = 0
+    timeStep: number = 0.01
 
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
         this.camera = new Camera(Math.PI / 4, canvas.width, canvas.height, 
-            0.1, 10.0, [-2, 0, 2], [0, 0, 0], [0, 0, 1]);
+            0.1, 10.0, [-5, 0, 2], [0, 0, 0], [0, 0, 1]);
     }
 
     async initialize() {
@@ -94,7 +98,7 @@ export class Renderer {
                     code: shader
                 }),
                 entryPoint: "vs_main",
-                buffers: [this.triangleMesh.bufferLayout]
+                buffers: [this.mesh.bufferLayout]
             },
             fragment: {
                 module: this.device.createShaderModule({
@@ -107,39 +111,57 @@ export class Renderer {
             },
             primitive: {
                 topology: "triangle-list"
+            },
+            depthStencil: {
+                depthWriteEnabled: true,
+                depthCompare: "less",
+                format: "depth24plus"
             }
         });
     }
 
     createAssets() {
-        this.triangleMesh = new TriangleMesh(this.device);
+        this.mesh = new Mesh(this.device);
     }
 
     render = () => {
         // Passing in the transformation matrices to the uniform buffer
-        this.device.queue.writeBuffer(this.uniformBuffer, 0, <ArrayBuffer>this.camera.model());
+        this.device.queue.writeBuffer(this.uniformBuffer, 0, <ArrayBuffer>this.camera.model(this.time));
         this.device.queue.writeBuffer(this.uniformBuffer, 64, <ArrayBuffer>this.camera.view());
         this.device.queue.writeBuffer(this.uniformBuffer, 128, <ArrayBuffer>this.camera.project());
-
+        
+        const depthTexture = this.device.createTexture({
+            size: [this.canvas.clientWidth, this.canvas.clientHeight],
+            format: 'depth24plus',
+            usage: GPUTextureUsage.RENDER_ATTACHMENT
+          });
         const commandEncoder : GPUCommandEncoder = this.device.createCommandEncoder();
         const textureView : GPUTextureView = this.context.getCurrentTexture().createView();
-        const colorAttachment: GPURenderPassColorAttachment = {
-            view : textureView,
-            clearValue : {r : 0.5, g : 0.0, b : 0.25, a : 1.0},
-            loadOp : "clear",
-            storeOp : "store"
-        };
         const renderPass : GPURenderPassEncoder = commandEncoder.beginRenderPass({
-            colorAttachments : [colorAttachment]
+            colorAttachments : [{
+                view : textureView,
+                clearValue : {r : 0.5, g : 0.0, b : 0.25, a : 1.0},
+                loadOp : "clear",
+                storeOp : "store"
+            }], 
+            depthStencilAttachment: {
+                view: depthTexture.createView(),
+          
+                depthClearValue: 1.0,
+                depthLoadOp: 'clear',
+                depthStoreOp: 'store',
+              },
         })
         renderPass.setPipeline(this.pipeline);
         renderPass.setBindGroup(0, this.bindGroup);
-        renderPass.setVertexBuffer(0, this.triangleMesh.buffer);
-        renderPass.draw(3, 1, 0, 0);
+        renderPass.setVertexBuffer(0, this.mesh.buffer);
+        renderPass.draw(this.mesh.idxCount, 1, 0, 0);
         renderPass.end();
 
         this.device.queue.submit([commandEncoder.finish()]);
 
         requestAnimationFrame(this.render);
+
+        this.time += this.timeStep;
     }
 }
