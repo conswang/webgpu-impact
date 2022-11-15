@@ -123,13 +123,14 @@ export class Renderer {
 
         const commandEncoder : GPUCommandEncoder = this.device.createCommandEncoder();
         const textureView : GPUTextureView = this.context.getCurrentTexture().createView();
+        const colorAttachment: GPURenderPassColorAttachment = {
+            view : textureView,
+            clearValue : {r : 0.5, g : 0.0, b : 0.25, a : 1.0},
+            loadOp : "clear",
+            storeOp : "store"
+        };
         const renderPass : GPURenderPassEncoder = commandEncoder.beginRenderPass({
-            colorAttachments : [{
-                view : textureView,
-                clearValue : {r : 0.5, g : 0.0, b : 0.25, a : 1.0},
-                loadOp : "clear",
-                storeOp : "store"
-            }]
+            colorAttachments : [colorAttachment]
         })
         renderPass.setPipeline(this.pipeline);
         renderPass.setBindGroup(0, this.bindGroup);
