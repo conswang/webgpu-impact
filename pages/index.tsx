@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Renderer } from "../renderer";
+import { Renderer } from "../rendering/renderer";
 
 export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
