@@ -106,7 +106,6 @@
     ],
     "materials" : [
         {
-            "alphaMode" : "BLEND",
             "doubleSided" : true,
             "name" : "\u9f52",
             "pbrMetallicRoughness" : {
@@ -118,7 +117,6 @@
             }
         },
         {
-            "alphaMode" : "BLEND",
             "doubleSided" : true,
             "name" : "\u4f53",
             "pbrMetallicRoughness" : {
@@ -130,7 +128,6 @@
             }
         },
         {
-            "alphaMode" : "BLEND",
             "doubleSided" : true,
             "name" : "\u4e0b\u896c",
             "pbrMetallicRoughness" : {
@@ -142,7 +139,6 @@
             }
         },
         {
-            "alphaMode" : "BLEND",
             "doubleSided" : true,
             "name" : "\u98fe",
             "pbrMetallicRoughness" : {
@@ -154,7 +150,6 @@
             }
         },
         {
-            "alphaMode" : "BLEND",
             "doubleSided" : true,
             "name" : "\u4e8c\u91cd.003",
             "pbrMetallicRoughness" : {
@@ -166,7 +161,6 @@
             }
         },
         {
-            "alphaMode" : "BLEND",
             "doubleSided" : true,
             "name" : "\u7709.006",
             "pbrMetallicRoughness" : {
@@ -178,7 +172,6 @@
             }
         },
         {
-            "alphaMode" : "BLEND",
             "doubleSided" : true,
             "name" : "\u776b.006",
             "pbrMetallicRoughness" : {
@@ -190,7 +183,6 @@
             }
         },
         {
-            "alphaMode" : "BLEND",
             "doubleSided" : true,
             "name" : "\u767d\u76ee.003",
             "pbrMetallicRoughness" : {
@@ -202,7 +194,6 @@
             }
         },
         {
-            "alphaMode" : "BLEND",
             "doubleSided" : true,
             "name" : "\u984f2",
             "pbrMetallicRoughness" : {
@@ -214,7 +205,6 @@
             }
         },
         {
-            "alphaMode" : "BLEND",
             "doubleSided" : true,
             "name" : "\u984f",
             "pbrMetallicRoughness" : {
@@ -226,7 +216,6 @@
             }
         },
         {
-            "alphaMode" : "BLEND",
             "doubleSided" : true,
             "name" : "\u624b\u94fe",
             "pbrMetallicRoughness" : {
@@ -238,7 +227,6 @@
             }
         },
         {
-            "alphaMode" : "BLEND",
             "doubleSided" : true,
             "name" : "\u9aea",
             "pbrMetallicRoughness" : {
@@ -262,7 +250,6 @@
             }
         },
         {
-            "alphaMode" : "BLEND",
             "doubleSided" : true,
             "name" : "\u53e3\u820c.003",
             "pbrMetallicRoughness" : {
@@ -274,7 +261,6 @@
             }
         },
         {
-            "alphaMode" : "BLEND",
             "doubleSided" : true,
             "name" : "\u808c.003",
             "pbrMetallicRoughness" : {
@@ -286,7 +272,6 @@
             }
         },
         {
-            "alphaMode" : "BLEND",
             "doubleSided" : true,
             "name" : "\u76ee.006",
             "pbrMetallicRoughness" : {
@@ -298,7 +283,6 @@
             }
         },
         {
-            "alphaMode" : "BLEND",
             "doubleSided" : true,
             "name" : "\u808c2",
             "pbrMetallicRoughness" : {
