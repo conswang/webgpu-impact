@@ -7,18 +7,18 @@ export class Renderer {
     canvas: HTMLCanvasElement;
     
     // Device/Context objects
-    adapter!: GPUAdapter; 
-    device!: GPUDevice;
-    context!: GPUCanvasContext;
-    format!: GPUTextureFormat;
+    adapter: GPUAdapter; 
+    device: GPUDevice;
+    context: GPUCanvasContext;
+    format: GPUTextureFormat;
 
     // Pipeline objects
-    uniformBuffer!: GPUBuffer;
-    bindGroup!: GPUBindGroup;
-    pipeline!: GPURenderPipeline;
+    uniformBuffer: GPUBuffer;
+    bindGroup: GPUBindGroup;
+    pipeline: GPURenderPipeline;
 
     // Assets
-    mesh!: Mesh;
+    mesh: Mesh;
     camera: Camera;
 
     // Time
