@@ -2,9 +2,11 @@ import shader from "./shaders/shaders.wgsl"
 import { Mesh } from "./types/mesh";
 import { Camera } from "./types/camera";
 import { mat4 } from "gl-matrix"
+import { threadId } from "worker_threads";
 
 export class Renderer {
     canvas: HTMLCanvasElement;
+    size: Array<number> = new Array<number>(2)
     
     // Device/Context objects
     adapter!: GPUAdapter; 
@@ -25,8 +27,13 @@ export class Renderer {
     time: number = 0
     timeStep: number = 0.01
 
+    // MSAA
+    samples: number = 1
+
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
+        this.size[0] = canvas.clientWidth;
+        this.size[1] = canvas.clientHeight;
         this.camera = new Camera(Math.PI / 4, canvas.width, canvas.height, 
             0.1, 10.0, [-5, 0, 2], [0, 0, 0], [0, 0, 1]);
     }
@@ -38,7 +45,7 @@ export class Renderer {
 
         await this.makePipeline();
 
-        this.render();
+        requestAnimationFrame(this.render);
     }
 
     async setupDevice() {
@@ -116,6 +123,9 @@ export class Renderer {
                 depthWriteEnabled: true,
                 depthCompare: "less",
                 format: "depth24plus"
+            },
+            multisample: {
+                count: this.samples
             }
         });
     }
@@ -131,22 +141,32 @@ export class Renderer {
         this.device.queue.writeBuffer(this.uniformBuffer, 128, <ArrayBuffer>this.camera.project());
         
         const depthTexture = this.device.createTexture({
-            size: [this.canvas.clientWidth, this.canvas.clientHeight],
+            size: this.size,
             format: 'depth24plus',
-            usage: GPUTextureUsage.RENDER_ATTACHMENT
+            usage: GPUTextureUsage.RENDER_ATTACHMENT,
+            sampleCount: this.samples
           });
         const commandEncoder : GPUCommandEncoder = this.device.createCommandEncoder();
         const textureView : GPUTextureView = this.context.getCurrentTexture().createView();
+
+        const texture = this.device.createTexture({
+            size: this.size,
+            sampleCount: this.samples,
+            format: this.format,
+            usage: GPUTextureUsage.RENDER_ATTACHMENT
+        });
+        const view = texture.createView();
+
         const renderPass : GPURenderPassEncoder = commandEncoder.beginRenderPass({
             colorAttachments : [{
-                view : textureView,
+                view : this.samples == 4 ? view : textureView,
+                resolveTarget: this.samples == 4 ? textureView : undefined,
                 clearValue : {r : 0.5, g : 0.0, b : 0.25, a : 1.0},
                 loadOp : "clear",
                 storeOp : "store"
             }], 
             depthStencilAttachment: {
                 view: depthTexture.createView(),
-          
                 depthClearValue: 1.0,
                 depthLoadOp: 'clear',
                 depthStoreOp: 'store',
