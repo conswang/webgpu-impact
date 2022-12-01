@@ -18,8 +18,3 @@ fn vs_main(@location(0) pos: vec3<f32>, @location(1) col: vec3<f32>) -> Fragment
     output.Color = vec4<f32>(col, 1.0);
     return output;
 }
-
-@fragment
-fn fs_main(@location(0) Color: vec4<f32>) -> @location(0) vec4<f32> {
-    return Color;
-}

@@ -1,4 +1,6 @@
-import shader from "./shaders/shaders.wgsl"
+// import shader from "./shaders/shaders.wgsl"
+import vertShader from "./shaders/vert.wgsl"
+import fragShader from "./shaders/frag.wgsl"
 import { Mesh } from "./types/mesh";
 import { Camera } from "./types/camera";
 import { mat4 } from "gl-matrix"
@@ -49,8 +51,13 @@ export class Renderer {
     }
 
     async setupDevice() {
-        this.adapter = <GPUAdapter> await navigator.gpu?.requestAdapter();
-        this.device = <GPUDevice> await this.adapter?.requestDevice();
+        await this.secureAdapter();
+        if (!this.adapter) return false;
+        while(!this.device) {
+            await this.secureAdapter();
+            if (!this.adapter) return false;
+        }
+
         this.context = <GPUCanvasContext> this.canvas.getContext("webgpu");
         this.format = "bgra8unorm";
 
@@ -59,6 +66,20 @@ export class Renderer {
             format: this.format,
             alphaMode: "opaque"
         });
+    }
+
+    // To resolve GPU Lost Connection error
+    // Source: https://github.com/gpuweb/gpuweb/blob/main/design/ErrorHandling.md
+    async secureAdapter() {
+        if (!this.adapter){
+            this.adapter = <GPUAdapter> await navigator.gpu?.requestAdapter();
+            if (!this.adapter) return null;
+        }
+        this.device = await this.adapter.requestDevice();
+        this.device.lost.then((info) => {
+            console.error("Device was lost.", info);
+            this.setupDevice();
+        })
     }
 
     async makePipeline() {
@@ -102,14 +123,14 @@ export class Renderer {
             layout: pipelineLayout,
             vertex: {
                 module: this.device.createShaderModule({
-                    code: shader
+                    code: vertShader
                 }),
                 entryPoint: "vs_main",
                 buffers: [this.mesh.bufferLayout]
             },
             fragment: {
                 module: this.device.createShaderModule({
-                    code: shader
+                    code: fragShader
                 }),
                 entryPoint: "fs_main",
                 targets: [{
