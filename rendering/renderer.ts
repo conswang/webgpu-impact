@@ -1,9 +1,6 @@
 import shader from "./shaders/shaders.wgsl"
 import { Mesh } from "./types/mesh";
 import { Camera } from "./types/camera";
-import { mat4 } from "gl-matrix"
-import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader';
-import * as THREE from 'three';
 
 export class Renderer {
     canvas: HTMLCanvasElement;
@@ -28,12 +25,6 @@ export class Renderer {
     timeStep: number = 0.01
 
     constructor(canvas: HTMLCanvasElement) {
-        const loader = new GLTFLoader();
-
-        loader.load("./models/mesh-only/diluc/diluc.gltf", function (gltf) {
-            console.log(gltf);
-        });
-
         this.canvas = canvas;
         this.camera = new Camera(Math.PI / 4, canvas.width, canvas.height, 
             0.1, 10.0, [-5, 0, 2], [0, 0, 0], [0, 0, 1]);

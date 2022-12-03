@@ -6,7 +6,7 @@ export default function Home() {
 
   useEffect(() => {
     if (canvasRef) {
-      const renderer : Renderer = new Renderer(canvasRef.current);
+      const renderer = new Renderer(canvasRef.current);
       renderer.initialize();
     }
   }, [canvasRef]);
