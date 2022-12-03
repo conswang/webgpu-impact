@@ -2,6 +2,7 @@ import shader from "./shaders/shaders.wgsl"
 import { Mesh } from "./types/mesh";
 import { Camera } from "./types/camera";
 import { mat4 } from "gl-matrix"
+import { MeshType } from "./types/mesh";
 
 export class Renderer {
     canvas: HTMLCanvasElement;
@@ -16,7 +17,7 @@ export class Renderer {
     uniformBuffer!: GPUBuffer;
     bindGroup!: GPUBindGroup;
     pipeline!: GPURenderPipeline;
-
+    
     // Assets
     mesh!: Mesh;
     camera: Camera;
@@ -121,7 +122,7 @@ export class Renderer {
     }
 
     createAssets() {
-        this.mesh = new Mesh(this.device);
+        this.mesh = new Mesh(this.device, MeshType.BLADE);
     }
 
     render = () => {
@@ -160,8 +161,8 @@ export class Renderer {
 
         this.device.queue.submit([commandEncoder.finish()]);
 
-        requestAnimationFrame(this.render);
+        //requestAnimationFrame(this.render);
 
-        this.time += this.timeStep;
+        //this.time += this.timeStep;
     }
 }
