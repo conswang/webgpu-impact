@@ -38,6 +38,7 @@ requires an installation of [Node.js](https://nodejs.org/en/).
 Compute Pipeline
 ==================================
 Grass Parameters: Forces, control points, stem positions
+![](images/ComputePipeline.png)
 
 Render Pipeline
 ==================================
