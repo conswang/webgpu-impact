@@ -8,8 +8,8 @@ WebGPU Non-PBR Renderer
   * [Website]
 
 * Eyad Almoamen
-  * [LinkedIn]
-  * [Website]
+  * https://www.linkedin.com/in/eyadalmoamen/
+  * https://eyadnabeel.com/
  
 * Edward Zhang
   * https://www.linkedin.com/in/edwardjczhang/
