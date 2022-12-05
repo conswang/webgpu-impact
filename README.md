@@ -20,7 +20,7 @@ WebGPU Non-PBR Renderer
 Overview
 ==================================
 This project attempts to:
-1. Provide a WebGPU implementation of a non-photorealistic renderer. This will be done by implementing the non-PBR shaders as described in this article [Blender NPR: Recreating the Genshin Impact Shader]{https://www.artstation.com/blogs/bjayers/9oOD/blender-npr-recreating-the-genshin-impact-shader}
+1. Provide a WebGPU implementation of a non-photorealistic renderer. This will be done by implementing the non-PBR shaders as described in this article ![Blender NPR: Recreating the Genshin Impact Shader]{https://www.artstation.com/blogs/bjayers/9oOD/blender-npr-recreating-the-genshin-impact-shader}
 2. Enrichen the ecosystem of compute shader applications in WebGPU
 
 
