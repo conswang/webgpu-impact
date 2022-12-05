@@ -1,9 +1,15 @@
 import shader from "./shaders/instance.wgsl"
+import computeShader from "./shaders/compute.wgsl"
 import { Mesh } from "./types/mesh";
 import { Camera } from "./types/camera";
 import { MeshType } from "./types/mesh";
 import { buffer } from "stream/consumers";
 import internal from "stream";
+import { vec3 } from "gl-matrix";
+import { cp } from "fs";
+import { Console } from "console";
+
+
 
 export class Instancer {
     viewport: HTMLCanvasElement;
@@ -13,16 +19,28 @@ export class Instancer {
     presentationFormat: GPUTextureFormat;
     camera: Camera;
     blade: Mesh;
+
     uniBuf: GPUBuffer;
     instanceBuf: GPUBuffer;
+    tipBuf: GPUBuffer;
+    forceBuf: GPUBuffer;
+    
     bindGroup: GPUBindGroup;
+    c_bindGroup: GPUBindGroup;
+    
     pipeline: GPURenderPipeline;
+    c_pipeline: GPUComputePipeline;
+    
     numInstances: number;
+    forces: vec3;
+
+    size: number;
 
     constructor(canvas: HTMLCanvasElement){
         this.viewport = canvas;
         this.camera = new Camera(Math.PI / 4, canvas.width, canvas.height, 
-        0.1, 1000.0, [0, 5, 40], [0, 0, 0], [0, 1, 0]);
+        0.1, 1000.0, [-15, 5, 50], [0, 0, 0], [0, 1, 0]);
+        this.forces = new Float32Array(4);
 
     }
 
@@ -47,6 +65,16 @@ export class Instancer {
     }
 
     async setup(){
+        /**** Shader Modules ****/
+        const instanceShader = this.device.createShaderModule({
+            code: shader
+        });
+
+        const compShader = this.device.createShaderModule({
+            code: computeShader
+        });
+        
+
         /**** Writing Buffers ****/
         //Camera Buffer
         this.uniBuf = this.device.createBuffer({
@@ -57,24 +85,30 @@ export class Instancer {
         this.device.queue.writeBuffer(this.uniBuf,   0,    <ArrayBuffer>this.camera.model(0));
         this.device.queue.writeBuffer(this.uniBuf,   64,   <ArrayBuffer>this.camera.view());
         this.device.queue.writeBuffer(this.uniBuf,   128,  <ArrayBuffer>this.camera.project());
+        
+        //Force Buffer
+        this.forceBuf = this.device.createBuffer({
+            size: 256, //Fuck if I know what the proper size is
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+        })
+        this.device.queue.writeBuffer(this.forceBuf, 0, <ArrayBuffer>this.forces)
 
         //Instance Data Buffer
         this.numInstances = 1000;
         let fieldWidth = 10;
 
         let instanceData = new Float32Array(4*this.numInstances);
-        
-
 
         for (let i=0; i < instanceData.length / 4; i++){
-            instanceData[i*4] = -fieldWidth + Math.random()*fieldWidth*2;
+            instanceData[i*4] = -2 * fieldWidth + 1 * Math.random()*fieldWidth*2;
             instanceData[i*4+1] = 0.0;
-            instanceData[i*4+2] = fieldWidth + Math.random()*fieldWidth*2;
+            instanceData[i*4+2] = 2 * fieldWidth + 1 * Math.random()*fieldWidth*2;
         }
-
+        
+        this.size = ((instanceData.byteLength + 3) & ~3); 
         this.instanceBuf = this.device.createBuffer({
-            size: ((instanceData.byteLength + 3) & ~3), // 4*3*numInstances, // 128 isntances of vec3
-            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+            size: this.size, // 4*3*numInstances, // 128 isntances of vec3
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST 
           });
           
         this.device.queue.writeBuffer(this.instanceBuf,   
@@ -83,6 +117,62 @@ export class Instancer {
                                       instanceData.byteOffset,
                                       instanceData.byteLength);
         
+        //TipPos Buffer
+        let tipPosData = new Float32Array(4*this.numInstances)
+        for (let i=0; i < tipPosData.length / 4; i++){
+            tipPosData[i*4] = 0.0;
+            tipPosData[i*4+1] = 1.0;
+            tipPosData[i*4+2] = 0.0;
+        }
+
+        this.tipBuf = this.device.createBuffer({
+            size: ((instanceData.byteLength + 3) & ~3), // 4*3*numInstances, // 128 isntances of vec3
+            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST |  GPUBufferUsage.COPY_SRC
+          });
+        
+        this.device.queue.writeBuffer(this.tipBuf,   
+                                      0,   
+                                      tipPosData.buffer,
+                                      tipPosData.byteOffset,
+                                      tipPosData.byteLength);
+        
+        this.tipBuf.unmap();
+        
+        /**** COMPUTE PIPELINE SETUP SHIT ****/
+        /**** Binding Groups ****/
+        const computeBindGroupLayout = this.device.createBindGroupLayout({
+            entries: [ 
+                    {binding: 0, visibility: GPUShaderStage.COMPUTE,
+                                              buffer: {}  },
+                    {binding: 1, visibility: GPUShaderStage.COMPUTE,
+                                              buffer: {type: 'storage'}}
+                   ]
+        });
+
+        this.c_bindGroup = this.device.createBindGroup({
+            layout: computeBindGroupLayout,
+            entries: [
+                    {binding: 0, resource: {buffer: this.instanceBuf}},
+                    {binding: 1, resource: {buffer: this.tipBuf}}
+            ]
+        })
+
+        /**** Pipelines ****/
+        //Pipeline Layout
+        const c_pipelineLayout = this.device.createPipelineLayout({
+            bindGroupLayouts: [computeBindGroupLayout]
+        });
+
+        //Pipeline Creation
+        this.c_pipeline = this.device.createComputePipeline({
+            layout: c_pipelineLayout,
+            compute: {
+                module: compShader,
+                entryPoint: "cp_main"
+            }
+        });
+        
+        /**** RENDER PIPELINE SETUP SHIT ****/
         /**** Binding Groups ****/
         //Group 0 - Scene Uniforms
         //Layouts
@@ -104,11 +194,6 @@ export class Instancer {
                 {binding: 0, resource: {buffer: this.uniBuf}},
                 {binding: 1, resource: {buffer: this.instanceBuf}}
             ]
-        });
-        
-        /**** Shader Modules ****/
-        const instanceShader = this.device.createShaderModule({
-            code: shader
         });
 
         /**** Pipelines ****/
@@ -136,7 +221,6 @@ export class Instancer {
     async frame(){
         console.log("in minecraft");
 
-
         const depthTextureDesc: GPUTextureDescriptor = 
         {
             size: [this.viewport.width, this.viewport.height],
@@ -146,11 +230,44 @@ export class Instancer {
 
         const depthTexture = this.device.createTexture(depthTextureDesc);
         
+        /**** Compute Step ****/
         const commandEncoder : GPUCommandEncoder = this.device.createCommandEncoder();
         const textureView : GPUTextureView = this.context.getCurrentTexture().createView();
-        const renderPass : GPURenderPassEncoder = commandEncoder.beginRenderPass({
+        
+        const computePass = commandEncoder.beginComputePass();
+        computePass.setPipeline(this.c_pipeline);
+        computePass.setBindGroup(0, this.c_bindGroup);
+        computePass.dispatchWorkgroups(64);
+        computePass.end();
+
+        const readBuffer = this.device.createBuffer({
+            size: this.size,
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
+        })
+
+        // Encode commands for copying buffer to buffer.
+        commandEncoder.copyBufferToBuffer(
+            this.tipBuf, // source buffer
+            0,                  // source offset
+            readBuffer,         // destination buffer
+            0,                  // destination offset
+            this.size // size
+        );
+
+        this.device.queue.submit([commandEncoder.finish()]);
+
+        await readBuffer.mapAsync(GPUMapMode.READ);
+        const arrBuff = readBuffer.getMappedRange();
+        console.log("Print out my buffer values please", new Float32Array(arrBuff));
+        
+
+        /**** Render Step ****/
+        const commandEncoder1 : GPUCommandEncoder = this.device.createCommandEncoder();
+        const textureView1 : GPUTextureView = this.context.getCurrentTexture().createView();
+
+        const renderPass : GPURenderPassEncoder = commandEncoder1.beginRenderPass({
               colorAttachments : [{
-                  view : textureView,
+                  view : textureView1,
                   clearValue : {r : 0.1, g : 0.1, b : 0.1, a : 1.0},
                   loadOp : 'clear',
                   storeOp : 'store'
@@ -169,6 +286,6 @@ export class Instancer {
           renderPass.setVertexBuffer(0, this.blade.buffer);
           renderPass.draw(this.blade.idxCount, this.numInstances, 0, 0);
           renderPass.end();
-          this.device.queue.submit([commandEncoder.finish()]);
+          this.device.queue.submit([commandEncoder1.finish()]);
     }
 }

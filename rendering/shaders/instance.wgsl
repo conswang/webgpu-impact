@@ -18,7 +18,6 @@ struct Fragment {
 
 @vertex
 fn vs_main(@builtin(instance_index) InstanceIdx: u32,
-           @builtin(vertex_index) VertIdx: u32,
            @location(0) pos: vec3<f32>, 
            @location(1) col: vec3<f32>) -> Fragment {
     var output : Fragment;
