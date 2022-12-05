@@ -45,11 +45,15 @@ Grass Parameters: Forces, control points, stem positions
 
 Grass in the scene are defined as simple triangles; one vertex of that triangle also serves as the control point that the forces in the scene will act on when animated.
 
+### Performance (Todo)
+
 Render Pipeline
 ==================================
 GLTF Loading
 UV Texturing
 Grass Instance Rendering
+
+### Test Scenes (Todo)
 
 Future Direction
 ==================================
