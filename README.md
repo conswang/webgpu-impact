@@ -20,10 +20,8 @@ WebGPU Non-PBR Renderer
 Overview
 ==================================
 This project attempts to:
-1. Provide a WebGPU implementation of a non-photorealistic renderer. This will be done by implementing the non-PBR shaders as described in this article ![Blender NPR: Recreating the Genshin Impact Shader]{https://www.artstation.com/blogs/bjayers/9oOD/blender-npr-recreating-the-genshin-impact-shader}
-2. Enrichen the ecosystem of compute shader applications in WebGPU
-
-
+1. Provide a WebGPU implementation of a non-photorealistic renderer. This will be done by implementing the non-PBR shaders as described in this article: [Blender NPR: Recreating the Genshin Impact Shader](https://www.artstation.com/blogs/bjayers/9oOD/blender-npr-recreating-the-genshin-impact-shader) using vertex and fragment shaders
+2. Enrichen the ecosystem of compute shader applications in WebGPU by rendering real-time grass according to this paper: [Responsive Real-Time Grass Rendering for General 3D Scenes](https://www.cg.tuwien.ac.at/research/publications/2017/JAHRMANN-2017-RRTG/JAHRMANN-2017-RRTG-draft.pdf)
 
 Installation
 ==================================
@@ -37,14 +35,20 @@ requires an installation of [Node.js](https://nodejs.org/en/).
 - Can only be viewed in Google Chrome Canary or Chrome Developer
 - Make sure to '--enable-unsafe-webgpu' in Chrome Settings
 
-Render Pipeline
-==================================
-
 Compute Pipeline
 ==================================
+Grass Parameters: Forces, control points, stem positions
+
+Render Pipeline
+==================================
+GLTF Loading
+UV Texturing
 
 Future Direction
 ==================================
+- Animation & Skinning
+- Ray-marched Clouds
+- Improved Camera Functionality
 
 Bloopers
 ==================================
