@@ -66,10 +66,6 @@ export class Instancer {
 
     async setup(){
         /**** Shader Modules ****/
-        const instanceShader = this.device.createShaderModule({
-            code: shader
-        });
-
         const compShader = this.device.createShaderModule({
             code: computeShader
         });
@@ -171,51 +167,6 @@ export class Instancer {
                 entryPoint: "cp_main"
             }
         });
-        
-        /**** RENDER PIPELINE SETUP SHIT ****/
-        /**** Binding Groups ****/
-        //Group 0 - Scene Uniforms
-        //Layouts
-        const sceneUniformBindGroupLayout = this.device.createBindGroupLayout({
-            entries: [
-                {
-                    binding: 0, visibility: GPUShaderStage.VERTEX, buffer: {}
-                },
-                {
-                    binding: 1, visibility: GPUShaderStage.VERTEX, buffer: {}
-                }
-            ]
-        });
-
-        //Group Bindings
-        this.bindGroup = this.device.createBindGroup({
-            layout: sceneUniformBindGroupLayout,
-            entries: [
-                {binding: 0, resource: {buffer: this.uniBuf}},
-                {binding: 1, resource: {buffer: this.instanceBuf}}
-            ]
-        });
-
-        /**** Pipelines ****/
-        //Pipeline Layout
-        const pipelineLayout = this.device.createPipelineLayout({
-            bindGroupLayouts: [sceneUniformBindGroupLayout]
-        });
-
-        //Pipeline Creation
-        this.pipeline = this.device.createRenderPipeline({
-            layout: pipelineLayout,
-            vertex: {module: instanceShader,
-                     entryPoint: 'vs_main',
-                     buffers: [this.blade.bufferLayout]},
-            fragment: {module: instanceShader,
-                       entryPoint: 'fs_main',
-                       targets: [{format: this.presentationFormat}]},
-            primitive: {topology: "triangle-list"},
-            depthStencil: {depthWriteEnabled: true,
-                           depthCompare: "less",
-                           format: "depth24plus"}
-        });
     }
 
     async frame(){
@@ -260,6 +211,88 @@ export class Instancer {
         const arrBuff = readBuffer.getMappedRange();
         console.log("Print out my buffer values please", new Float32Array(arrBuff));
         
+        /**** On the Fly Buffer Definition ****/
+        const newTipPos = new Float32Array(arrBuff);
+
+        let tipPosData = new Float32Array(4*this.numInstances)
+        for (let i=0; i < tipPosData.length / 4; i++){
+            tipPosData[i*4] = 0.0;
+            tipPosData[i*4+1] = 1.0;
+            tipPosData[i*4+2] = 0.0;
+        }
+
+        const newTipBuf = this.device.createBuffer({
+            size: ((newTipPos.byteLength + 3) & ~3),
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM
+        })
+
+        /**** Fuck you I'll make another group i don't give a fuck ****/
+        
+        /**** RENDER PIPELINE SETUP SHIT ****/
+        /**** Binding Groups ****/
+        //Group 0 - Scene Uniforms
+        //Layouts
+        const sceneUniformBindGroupLayout = this.device.createBindGroupLayout({
+            entries: [
+                {
+                    binding: 0, visibility: GPUShaderStage.VERTEX, buffer: {}
+                },
+                {
+                    binding: 1, visibility: GPUShaderStage.VERTEX, buffer: {}
+                }
+            ]
+        });
+
+        //Group Bindings
+        this.bindGroup = this.device.createBindGroup({
+            layout: sceneUniformBindGroupLayout,
+            entries: [
+                {binding: 0, resource: {buffer: this.uniBuf}},
+                {binding: 1, resource: {buffer: this.instanceBuf}}
+            ]
+        });
+
+        //Group 1 - UpdatedData
+        const tipBindGroupLayout = this.device.createBindGroupLayout({
+            entries: [
+                {
+                    binding: 0, visibility: GPUShaderStage.VERTEX, buffer: {}
+                }
+            ]
+        });
+
+        //Group Bindings
+        const tipBindGroup = this.device.createBindGroup({
+            layout: tipBindGroupLayout,
+            entries: [
+                {binding: 0, resource: {buffer: newTipBuf}}
+            ]
+        });
+
+        /**** Pipelines ****/
+        //Pipeline Layout
+        const pipelineLayout = this.device.createPipelineLayout({
+            bindGroupLayouts: [sceneUniformBindGroupLayout, tipBindGroupLayout]
+        });
+
+        const instanceShader = this.device.createShaderModule({
+            code: shader
+        });
+
+        //Pipeline Creation
+        this.pipeline = this.device.createRenderPipeline({
+            layout: pipelineLayout,
+            vertex: {module: instanceShader,
+                     entryPoint: 'vs_main',
+                     buffers: [this.blade.bufferLayout]},
+            fragment: {module: instanceShader,
+                       entryPoint: 'fs_main',
+                       targets: [{format: this.presentationFormat}]},
+            primitive: {topology: "triangle-list"},
+            depthStencil: {depthWriteEnabled: true,
+                           depthCompare: "less",
+                           format: "depth24plus"}
+        });
 
         /**** Render Step ****/
         const commandEncoder1 : GPUCommandEncoder = this.device.createCommandEncoder();
@@ -283,6 +316,7 @@ export class Instancer {
 
           renderPass.setPipeline(this.pipeline);
           renderPass.setBindGroup(0, this.bindGroup);
+          renderPass.setBindGroup(1, tipBindGroup);
           renderPass.setVertexBuffer(0, this.blade.buffer);
           renderPass.draw(this.blade.idxCount, this.numInstances, 0, 0);
           renderPass.end();
