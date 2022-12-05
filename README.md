@@ -38,12 +38,16 @@ requires an installation of [Node.js](https://nodejs.org/en/).
 Compute Pipeline
 ==================================
 Grass Parameters: Forces, control points, stem positions
+
 ![](images/ComputePipeline.png)
+
+Grass in the scene are defined as simple triangles; one vertex of that triangle also serves as the control point that the forces in the scene will act on when animated.
 
 Render Pipeline
 ==================================
 GLTF Loading
 UV Texturing
+Grass Instance Rendering
 
 Future Direction
 ==================================
