@@ -45,9 +45,25 @@ export class Renderer {
 
         this.createAssets();
 
+        await this.mesh.createTexture(this.device, "https://previews.123rf.com/images/aruba2000/aruba20001611/aruba2000161100262/68716903-old-red-brick-wall-square-texture-cracked-brickwall-frame-background-grungy-stonewall-surface-red-br.jpg")
+
         await this.makePipeline();
 
         requestAnimationFrame(this.render);
+    }
+
+    waitForTexture() {
+        if(typeof this.mesh.texture !== "undefined"){
+            //variable exists, do what you want
+            if (this.mesh.texture){
+                console.log("Texture Loaded");
+            } else {
+                console.log("Texture Not Loaded");
+            }
+        }
+        else{
+            setTimeout(this.waitForTexture, 250);
+        }
     }
 
     async setupDevice() {
@@ -99,9 +115,27 @@ export class Renderer {
                     // Buffer is nothing, but we're specifying that we're using
                     // a buffer resource here.
                     buffer: {}
+                },
+                {
+                    binding: 1,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    sampler: {}
+                },
+                {
+                    binding: 2,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    texture: {}
                 }
             ]
         });
+        const sampler = this.device.createSampler({
+            magFilter: 'linear',
+            minFilter: 'linear'
+        });
+
+        console.log("TEXTURE NEEDED");
+
+        await this.waitForTexture();
 
         this.bindGroup = this.device.createBindGroup({
             layout: bindGroupLayout,
@@ -111,6 +145,14 @@ export class Renderer {
                     resource: {
                         buffer: this.uniformBuffer
                     }
+                },
+                {
+                    binding: 1,
+                    resource: sampler
+                },
+                {
+                    binding: 2,
+                    resource: this.mesh.texture!.texture!.createView()
                 }
             ]
         });
@@ -180,7 +222,7 @@ export class Renderer {
 
         const renderPass : GPURenderPassEncoder = commandEncoder.beginRenderPass({
             colorAttachments : [{
-                view : this.samples == 4 ? view : textureView,
+                view : this.samples == 4 ? view : this.context.getCurrentTexture().createView(),
                 resolveTarget: this.samples == 4 ? textureView : undefined,
                 clearValue : {r : 0.5, g : 0.0, b : 0.25, a : 1.0},
                 loadOp : "clear",
