@@ -31,7 +31,9 @@ fn vs_main(@builtin(instance_index) InstanceIdx: u32,
     var worldPos = pos + tr.xyz; //vec3<f32>(0.0, 1.0, 0.0);
     output.Position = transform.projection * transform.view * transform.model * vec4<f32>(worldPos, 1.0);
     
-    output.Color = vec4<f32>(1.0, 1.0, 1.0, 1.0);
+
+
+    output.Color = tipPos.pos[InstanceIdx];//vec4<f32>(1.0, 0.0, 0.0, 1.0);
     return output;
 }
 

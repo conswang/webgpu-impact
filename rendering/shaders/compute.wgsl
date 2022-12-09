@@ -20,5 +20,5 @@ fn cp_main(@builtin(global_invocation_id) globalId      : vec3<u32>,
         return;
     }
 
-    tipPos.pos[globalId.x] = vec4<f32>(0.0, 0.0, 0.0, 1.0);
+    tipPos.pos[globalId.x] = vec4<f32>(tipPos.pos[globalId.x]);//vec4<f32>(1.0, 0.0, 0.0, 1.0);
 }

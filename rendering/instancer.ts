@@ -9,8 +9,6 @@ import { vec3 } from "gl-matrix";
 import { cp } from "fs";
 import { Console } from "console";
 
-
-
 export class Instancer {
     viewport: HTMLCanvasElement;
     adapter: GPUAdapter;
@@ -119,18 +117,20 @@ export class Instancer {
             tipPosData[i*4] = 0.0;
             tipPosData[i*4+1] = 1.0;
             tipPosData[i*4+2] = 0.0;
+            tipPosData[i*4+3] = 1.0;
         }
 
         this.tipBuf = this.device.createBuffer({
             size: ((instanceData.byteLength + 3) & ~3), // 4*3*numInstances, // 128 isntances of vec3
-            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST |  GPUBufferUsage.COPY_SRC
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST |  GPUBufferUsage.COPY_SRC
           });
-        
-        this.device.queue.writeBuffer(this.tipBuf,   
-                                      0,   
-                                      tipPosData.buffer,
-                                      tipPosData.byteOffset,
-                                      tipPosData.byteLength);
+          
+        this.device.queue.writeBuffer(this.tipBuf,   0,    tipPosData);
+        //this.device.queue.writeBuffer(this.tipBuf,   
+        //                              0,   
+        //                              tipPosData.buffer,
+        //                              tipPosData.byteOffset,
+        //                              tipPosData.byteLength);
         
         this.tipBuf.unmap();
         
@@ -196,13 +196,26 @@ export class Instancer {
             usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
         })
 
+        const uniBuffer = this.device.createBuffer({
+            size: this.size,
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC | GPUBufferUsage.UNIFORM
+        })
+
         // Encode commands for copying buffer to buffer.
         commandEncoder.copyBufferToBuffer(
             this.tipBuf, // source buffer
             0,                  // source offset
             readBuffer,         // destination buffer
             0,                  // destination offset
-            this.size // size
+            16000 // size
+        );
+
+        commandEncoder.copyBufferToBuffer(
+            this.tipBuf, // source buffer
+            0,                  // source offset
+            uniBuffer,         // destination buffer
+            0,                  // destination offset
+            16000 // size
         );
 
         this.device.queue.submit([commandEncoder.finish()]);
@@ -211,21 +224,22 @@ export class Instancer {
         const arrBuff = readBuffer.getMappedRange();
         console.log("Print out my buffer values please", new Float32Array(arrBuff));
         
-        /**** On the Fly Buffer Definition ****/
+        /**** On the Fly Buffer Definition ****
         const newTipPos = new Float32Array(arrBuff);
 
         let tipPosData = new Float32Array(4*this.numInstances)
         for (let i=0; i < tipPosData.length / 4; i++){
             tipPosData[i*4] = 0.0;
-            tipPosData[i*4+1] = 1.0;
+            tipPosData[i*4+1] = 0.0;
             tipPosData[i*4+2] = 0.0;
         }
 
         const newTipBuf = this.device.createBuffer({
             size: ((newTipPos.byteLength + 3) & ~3),
             usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM
-        })
+        })*/
 
+        
         /**** Fuck you I'll make another group i don't give a fuck ****/
         
         /**** RENDER PIPELINE SETUP SHIT ****/
@@ -265,7 +279,7 @@ export class Instancer {
         const tipBindGroup = this.device.createBindGroup({
             layout: tipBindGroupLayout,
             entries: [
-                {binding: 0, resource: {buffer: newTipBuf}}
+                {binding: 0, resource: {buffer: uniBuffer}}
             ]
         });
 
