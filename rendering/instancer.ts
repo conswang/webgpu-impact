@@ -22,6 +22,8 @@ export class Instancer {
     instanceBuf: GPUBuffer;
     tipBuf: GPUBuffer;
     forceBuf: GPUBuffer;
+    readBuffer: GPUBuffer;
+    uniBuffer: GPUBuffer;
     
     bindGroup: GPUBindGroup;
     c_bindGroup: GPUBindGroup;
@@ -58,7 +60,7 @@ export class Instancer {
         });
 
         this.blade = new Mesh(this.device, MeshType.BLADE);
-        this.setup();
+        await this.setup();
         this.frame();
     }
 
@@ -167,9 +169,22 @@ export class Instancer {
                 entryPoint: "cp_main"
             }
         });
+
+        this.readBuffer = this.device.createBuffer({
+            size: this.size,
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
+        })
+        await this.readBuffer.mapAsync(GPUMapMode.READ);
+        const arrBuff = this.readBuffer.getMappedRange();
+        console.log("Print out my buffer values please", new Float32Array(arrBuff));
+
+        this.uniBuffer = this.device.createBuffer({
+            size: this.size,
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC | GPUBufferUsage.UNIFORM
+        });
     }
 
-    async frame(){
+    frame() {
         console.log("in minecraft");
 
         const depthTextureDesc: GPUTextureDescriptor = 
@@ -191,21 +206,11 @@ export class Instancer {
         computePass.dispatchWorkgroups(64);
         computePass.end();
 
-        const readBuffer = this.device.createBuffer({
-            size: this.size,
-            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
-        })
-
-        const uniBuffer = this.device.createBuffer({
-            size: this.size,
-            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC | GPUBufferUsage.UNIFORM
-        })
-
         // Encode commands for copying buffer to buffer.
         commandEncoder.copyBufferToBuffer(
             this.tipBuf, // source buffer
             0,                  // source offset
-            readBuffer,         // destination buffer
+            this.readBuffer,         // destination buffer
             0,                  // destination offset
             16000 // size
         );
@@ -213,16 +218,12 @@ export class Instancer {
         commandEncoder.copyBufferToBuffer(
             this.tipBuf, // source buffer
             0,                  // source offset
-            uniBuffer,         // destination buffer
+            this.uniBuffer,         // destination buffer
             0,                  // destination offset
             16000 // size
         );
 
         this.device.queue.submit([commandEncoder.finish()]);
-
-        await readBuffer.mapAsync(GPUMapMode.READ);
-        const arrBuff = readBuffer.getMappedRange();
-        console.log("Print out my buffer values please", new Float32Array(arrBuff));
         
         /**** On the Fly Buffer Definition ****
         const newTipPos = new Float32Array(arrBuff);
@@ -279,7 +280,7 @@ export class Instancer {
         const tipBindGroup = this.device.createBindGroup({
             layout: tipBindGroupLayout,
             entries: [
-                {binding: 0, resource: {buffer: uniBuffer}}
+                {binding: 0, resource: {buffer: this.uniBuffer}}
             ]
         });
 
@@ -335,5 +336,7 @@ export class Instancer {
           renderPass.draw(this.blade.idxCount, this.numInstances, 0, 0);
           renderPass.end();
           this.device.queue.submit([commandEncoder1.finish()]);
+
+          requestAnimationFrame(() => this.frame());
     }
 }
