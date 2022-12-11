@@ -1,10 +1,10 @@
 import { vec2, vec3, mat4 } from "gl-matrix"
 
 export class Camera {
-    fovy: number
-    aspect: vec2
-    nearClip: number
-    farClip: number
+    fovy: number;
+    aspect: vec2;
+    nearClip: number;
+    farClip: number;
 
     eye: vec3 = vec3.create()
     ref: vec3 = vec3.create()
@@ -52,4 +52,5 @@ export class Camera {
         mat4.rotate(model, model, val, [0, 0, 1]);
         return model;
     }
+
 }
