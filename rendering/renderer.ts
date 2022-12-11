@@ -22,6 +22,9 @@ export class Renderer {
     mesh!: Mesh;
     camera: Camera;
 
+    // Depth and Color Textures
+    depthTexture!: GPUTexture;    
+
     // Time
     time: number = 0
     timeStep: number = 0.01
@@ -39,7 +42,7 @@ export class Renderer {
 
         await this.makePipeline();
 
-        this.render();
+        requestAnimationFrame(this.render);
     }
 
     async setupDevice() {
@@ -119,6 +122,12 @@ export class Renderer {
                 format: "depth24plus"
             }
         });
+
+        this.depthTexture = this.device.createTexture({
+            size: [this.canvas.clientWidth, this.canvas.clientHeight],
+            format: 'depth24plus',
+            usage: GPUTextureUsage.RENDER_ATTACHMENT
+        });
     }
 
     createAssets() {
@@ -131,11 +140,6 @@ export class Renderer {
         this.device.queue.writeBuffer(this.uniformBuffer, 64, <ArrayBuffer>this.camera.view());
         this.device.queue.writeBuffer(this.uniformBuffer, 128, <ArrayBuffer>this.camera.project());
         
-        const depthTexture = this.device.createTexture({
-            size: [this.canvas.clientWidth, this.canvas.clientHeight],
-            format: 'depth24plus',
-            usage: GPUTextureUsage.RENDER_ATTACHMENT
-          });
         const commandEncoder : GPUCommandEncoder = this.device.createCommandEncoder();
         const textureView : GPUTextureView = this.context.getCurrentTexture().createView();
         const renderPass : GPURenderPassEncoder = commandEncoder.beginRenderPass({
@@ -161,8 +165,8 @@ export class Renderer {
 
         this.device.queue.submit([commandEncoder.finish()]);
 
-        //requestAnimationFrame(this.render);
+        requestAnimationFrame(this.render);
 
-        //this.time += this.timeStep;
+        this.time += this.timeStep;
     }
 }
