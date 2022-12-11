@@ -24,6 +24,8 @@ export class Instancer {
     forceBuf: GPUBuffer;
     readBuffer: GPUBuffer;
     uniBuffer: GPUBuffer;
+    timeBuffer: GPUBuffer;
+    
     
     bindGroup: GPUBindGroup;
     c_bindGroup: GPUBindGroup;
@@ -33,6 +35,7 @@ export class Instancer {
     
     numInstances: number;
     forces: vec3;
+    timeData:  Float32Array
 
     size: number;
 
@@ -41,6 +44,7 @@ export class Instancer {
         this.camera = new Camera(Math.PI / 4, canvas.width, canvas.height, 
         0.1, 1000.0, [-15, 5, 50], [0, 0, 0], [0, 1, 0]);
         this.forces = new Float32Array(4);
+        this.timeData = new Float32Array(1);
 
     }
 
@@ -89,6 +93,16 @@ export class Instancer {
         })
         this.device.queue.writeBuffer(this.forceBuf, 0, <ArrayBuffer>this.forces)
 
+        //Time Buffer
+        this.timeBuffer = this.device.createBuffer({
+            size: 16384, // 4, 
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+          });
+          
+          this.timeData[0] = 0.0;
+          this.device.queue.writeBuffer(this.timeBuffer,   0,    this.timeData );
+          
+
         //Instance Data Buffer
         this.numInstances = 1000;
         let fieldWidth = 10;
@@ -117,7 +131,7 @@ export class Instancer {
         let tipPosData = new Float32Array(4*this.numInstances)
         for (let i=0; i < tipPosData.length / 4; i++){
             tipPosData[i*4] = 0.0;
-            tipPosData[i*4+1] = 1.0;
+            tipPosData[i*4+1] = 1.0 + Math.random()*.3;
             tipPosData[i*4+2] = 0.0;
             tipPosData[i*4+3] = 1.0;
         }
@@ -143,7 +157,9 @@ export class Instancer {
                     {binding: 0, visibility: GPUShaderStage.COMPUTE,
                                               buffer: {}  },
                     {binding: 1, visibility: GPUShaderStage.COMPUTE,
-                                              buffer: {type: 'storage'}}
+                                              buffer: {type: 'storage'}},
+                    {binding: 2, visibility: GPUShaderStage.COMPUTE,
+                                              buffer: {}}
                    ]
         });
 
@@ -151,7 +167,8 @@ export class Instancer {
             layout: computeBindGroupLayout,
             entries: [
                     {binding: 0, resource: {buffer: this.instanceBuf}},
-                    {binding: 1, resource: {buffer: this.tipBuf}}
+                    {binding: 1, resource: {buffer: this.tipBuf}},
+                    {binding: 2, resource: {buffer: this.timeBuffer}}
             ]
         })
 
@@ -170,13 +187,14 @@ export class Instancer {
             }
         });
 
-        this.readBuffer = this.device.createBuffer({
+        /*this.readBuffer = this.device.createBuffer({
             size: this.size,
             usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
         })
         await this.readBuffer.mapAsync(GPUMapMode.READ);
         const arrBuff = this.readBuffer.getMappedRange();
         console.log("Print out my buffer values please", new Float32Array(arrBuff));
+        */
 
         this.uniBuffer = this.device.createBuffer({
             size: this.size,
@@ -207,13 +225,18 @@ export class Instancer {
         computePass.end();
 
         // Encode commands for copying buffer to buffer.
-        commandEncoder.copyBufferToBuffer(
+        /*commandEncoder.copyBufferToBuffer(
             this.tipBuf, // source buffer
             0,                  // source offset
             this.readBuffer,         // destination buffer
             0,                  // destination offset
             16000 // size
-        );
+        );*/
+        
+        const uniBuffer = this.device.createBuffer({
+            size: this.size,
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC | GPUBufferUsage.UNIFORM
+        })
 
         commandEncoder.copyBufferToBuffer(
             this.tipBuf, // source buffer
@@ -225,24 +248,8 @@ export class Instancer {
 
         this.device.queue.submit([commandEncoder.finish()]);
         
-        /**** On the Fly Buffer Definition ****
-        const newTipPos = new Float32Array(arrBuff);
-
-        let tipPosData = new Float32Array(4*this.numInstances)
-        for (let i=0; i < tipPosData.length / 4; i++){
-            tipPosData[i*4] = 0.0;
-            tipPosData[i*4+1] = 0.0;
-            tipPosData[i*4+2] = 0.0;
-        }
-
-        const newTipBuf = this.device.createBuffer({
-            size: ((newTipPos.byteLength + 3) & ~3),
-            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM
-        })*/
-
-        
         /**** Fuck you I'll make another group i don't give a fuck ****/
-        
+    
         /**** RENDER PIPELINE SETUP SHIT ****/
         /**** Binding Groups ****/
         //Group 0 - Scene Uniforms
@@ -336,7 +343,8 @@ export class Instancer {
           renderPass.draw(this.blade.idxCount, this.numInstances, 0, 0);
           renderPass.end();
           this.device.queue.submit([commandEncoder1.finish()]);
-
+          this.timeData[0] += 0.1;
+          this.device.queue.writeBuffer(this.timeBuffer,   0,    this.timeData );
           requestAnimationFrame(() => this.frame());
     }
 }

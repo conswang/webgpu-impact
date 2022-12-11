@@ -199,9 +199,9 @@ export class Mesh {
 
     createBlade() {
         let f0 : Array<Vertex> = new Array<Vertex>();
-        f0.push({pos: [-0.05, -1.0, 0.0], col: [0, 1.0, 0.0], uv: undefined});
-        f0.push({pos: [0.0, 1.0, 0.0], col: [.05, -1.0, 0.0], uv: undefined});
-        f0.push({pos: [.05, -1.0, 0.0], col: [-.05, -1.0, 0.0], uv: undefined});
+        f0.push({pos: [-0.1, -1.0, 0.0], col: [0, 1.0, 0.0], uv: undefined});
+        f0.push({pos: [0.0, 1.0, 0.0], col: [.1, -1.0, 0.0], uv: undefined});
+        f0.push({pos: [.1, -1.0, 0.0], col: [-.1, -1.0, 0.0], uv: undefined});
 
         this.addFace(f0, [0.2, 0.7, 0.4]);
     }
