@@ -131,23 +131,29 @@ export class Instancer {
         let tipPosData = new Float32Array(4*this.numInstances)
         for (let i=0; i < tipPosData.length / 4; i++){
             tipPosData[i*4] = 0.0;
-            tipPosData[i*4+1] = 1.0 + Math.random()*.3;
+            tipPosData[i*4+1] = Math.random()*2;
             tipPosData[i*4+2] = 0.0;
             tipPosData[i*4+3] = 1.0;
+        }
+
+        const initTipPos = this.device.createBuffer({
+            size: ((instanceData.byteLength + 3) & ~3), // 4*3*numInstances, // 128 isntances of vec3
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST |  GPUBufferUsage.COPY_SRC
+          });
+
+        this.device.queue.writeBuffer(initTipPos,   0,    tipPosData);
+        
+        for (let i=0; i < tipPosData.length / 4; i++){
+            tipPosData[i*4] = Math.random()*2;
+            tipPosData[i*4+2] = Math.random()*2;
         }
 
         this.tipBuf = this.device.createBuffer({
             size: ((instanceData.byteLength + 3) & ~3), // 4*3*numInstances, // 128 isntances of vec3
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST |  GPUBufferUsage.COPY_SRC
           });
-          
-        this.device.queue.writeBuffer(this.tipBuf,   0,    tipPosData);
-        //this.device.queue.writeBuffer(this.tipBuf,   
-        //                              0,   
-        //                              tipPosData.buffer,
-        //                              tipPosData.byteOffset,
-        //                              tipPosData.byteLength);
         
+        this.device.queue.writeBuffer(this.tipBuf,   0,    tipPosData);
         this.tipBuf.unmap();
         
         /**** COMPUTE PIPELINE SETUP SHIT ****/
@@ -159,6 +165,8 @@ export class Instancer {
                     {binding: 1, visibility: GPUShaderStage.COMPUTE,
                                               buffer: {type: 'storage'}},
                     {binding: 2, visibility: GPUShaderStage.COMPUTE,
+                                              buffer: {}},
+                    {binding: 3, visibility: GPUShaderStage.COMPUTE,
                                               buffer: {}}
                    ]
         });
@@ -168,7 +176,8 @@ export class Instancer {
             entries: [
                     {binding: 0, resource: {buffer: this.instanceBuf}},
                     {binding: 1, resource: {buffer: this.tipBuf}},
-                    {binding: 2, resource: {buffer: this.timeBuffer}}
+                    {binding: 2, resource: {buffer: this.timeBuffer}},
+                    {binding: 3, resource: {buffer: initTipPos}}
             ]
         })
 

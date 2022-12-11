@@ -9,7 +9,7 @@ export default function Home() {
   useEffect(() => {
     if (canvasRef) {
       const renderer : Renderer = new Renderer(canvasRef.current);
-      renderer.initialize();
+      //renderer.initialize();
     }
     if (canvasRef2){
       const instancer: Instancer = new Instancer(canvasRef2.current);

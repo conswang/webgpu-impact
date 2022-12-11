@@ -49,7 +49,7 @@ export class Camera {
     // Model matrix pending the implementation of a rotation model
     model(val: number) : mat4 {
         var model : mat4 = mat4.create();
-        mat4.rotate(model, model, val, [0, 0, 1]);
+        mat4.rotate(model, model, val, [0, 1, 0]);
         return model;
     }
 }
