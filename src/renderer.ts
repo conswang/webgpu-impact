@@ -1,11 +1,14 @@
 // import shader from "./shaders/shaders.wgsl"
 import vertShader from "./shaders/vert.wgsl"
 import fragShader from "./shaders/frag.wgsl"
+import toonShader from "./shaders/toonFrag.wgsl"
+import outlineShader from "./shaders/outline.wgsl"
 import { Mesh } from "./types/mesh";
 import { Camera } from "./types/camera";
 import { mat4, vec4 } from "gl-matrix"
 import { threadId } from "worker_threads";
 import { Light } from "./types/light";
+import { inputs } from "./types/inputs";
 
 export class Renderer {
     canvas: HTMLCanvasElement;
@@ -44,7 +47,7 @@ export class Renderer {
         this.size[0] = canvas.clientWidth;
         this.size[1] = canvas.clientHeight;
         this.camera = new Camera(Math.PI / 4, canvas.width, canvas.height, 
-            0.1, 10.0, [-5, 0, 2], [0, 0, 0], [0, 0, 1]);
+            0.1, 50.0, [0, 0, -5], [0, 0, 0], [0, 1, 0]);
         this.light = new Light([1.0, 2.0, 0.0], [1.0, 1.0, 1.0]);
     }
 
@@ -53,15 +56,15 @@ export class Renderer {
 
         this.createAssets();
 
-        await this.mesh.createTexture(this.device, "https://imgs.smoothradio.com/images/191589?width=1200&crop=1_1&signature=KHg-WnaLlH9KsZwE-qYgxTkaSpU=")
+        await this.mesh.createTexture(this.device, "https://imgs.smoothradio.com/images/191589?width=1200&crop=1_1&signature=KHg-WnaLlH9KsZwE-qYgxTkaSpU=");
 
         await this.makePipeline();
 
-        requestAnimationFrame(this.render);
+        requestAnimationFrame(this.frame);
     }
 
     waitForTexture() {
-        if(typeof this.mesh.texture !== "undefined"){
+        if(typeof this.mesh.texture !== "undefined") {
             //variable exists, do what you want
             if (this.mesh.texture){
                 console.log("Texture Loaded");
@@ -69,7 +72,7 @@ export class Renderer {
                 console.log("Texture Not Loaded");
             }
         }
-        else{
+        else {
             setTimeout(this.waitForTexture, 250);
         }
     }
@@ -199,7 +202,7 @@ export class Renderer {
             },
             fragment: {
                 module: this.device.createShaderModule({
-                    code: fragShader
+                    code: toonShader
                 }),
                 entryPoint: "fs_main",
                 targets: [{
@@ -238,9 +241,17 @@ export class Renderer {
         this.mesh = new Mesh(this.device);
     }
 
-    render = () => {
+    frame = () => {
+        this.camera.updateAttributes(inputs, 0.1);
+        this.mesh.rotateMesh();
+        this.render();
+        requestAnimationFrame(this.frame);
+        this.time += this.timeStep;
+    }
+
+    render() {
         // Passing in the transformation matrices to the uniform buffer
-        var model : mat4 = this.camera.model(this.time);
+        var model : mat4 = this.mesh.getModelMatrix();
         var normal : mat4 = mat4.create();
         mat4.invert(normal, model);
         mat4.transpose(normal, normal);
@@ -286,9 +297,5 @@ export class Renderer {
         renderPass.end();
 
         this.device.queue.submit([commandEncoder.finish()]);
-
-        requestAnimationFrame(this.render);
-
-        this.time += this.timeStep;
     }
 }

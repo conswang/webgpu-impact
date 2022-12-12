@@ -1,5 +1,5 @@
 import { throws } from "assert";
-import { vec3, vec2 } from "gl-matrix"
+import { vec3, vec2, mat4 } from "gl-matrix"
 import { Texture } from "./texture"
 import { isArrayLiteralExpression } from "typescript";
 
@@ -23,6 +23,9 @@ export class Mesh {
 
     vertDataVBO!: Float32Array;
     idxDataVBO!: Uint32Array;
+
+    translate: vec3 = vec3.create()
+    rotate: vec3 = vec3.create()
 
     constructor(device: GPUDevice) {
         // x y r g b        
@@ -94,6 +97,11 @@ export class Mesh {
         this.faces.push(new Face(indices));
     }
 
+    rotateMesh() {
+        // vec3.rotateY(this.rotate, this.rotate, [0, 0, 0], 0.01);
+        this.rotate[1] += 0.01;
+    }
+
     populateVBO() {
         var verts : Array<number> = new Array<number>();
 
@@ -155,6 +163,15 @@ export class Mesh {
         this.vertDataVBO = new Float32Array(verts);
         console.log(this.vertCount);
         console.log(this.idxCount);
+    }
+
+    getModelMatrix() : mat4 {
+        let model : mat4 = mat4.create();
+        mat4.rotate(model, model, this.rotate[0], [1, 0, 0]);
+        mat4.rotate(model, model, this.rotate[1], [0, 1, 0]);
+        mat4.rotate(model, model, this.rotate[2], [0, 0, 1]);
+        mat4.translate(model, model, this.translate);
+        return model;
     }
 
     createCube() {
