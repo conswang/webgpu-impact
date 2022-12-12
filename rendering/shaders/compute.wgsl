@@ -19,6 +19,8 @@ struct InitTipPos {
 @binding(2) @group(0) var<uniform> time : Time;
 @binding(3) @group(0) var<uniform> initTipPos : InitTipPos;
 
+
+//Reference: https://webgpulab.xbdev.net/index.php?page=editor&id=clouds&
 fn hash( p: vec2<f32> ) -> vec2<f32>
 {
   var pp  = vec2<f32>( dot(p,vec2<f32>(127.1,311.7)), 
@@ -81,10 +83,13 @@ fn cp_main(@builtin(global_invocation_id) globalId      : vec3<u32>,
     var recovery = .01 * (initTipPos.pos[globalId.x] - tipPos.pos[globalId.x]);
 
     //Wind Dir
-    //var windDir = vec3
+
+    var windDir = vec2<f32>(20*cos(f32(globalId.x) + time.currSec/100), 10*sin((f32(globalId.x) + time.currSec/100)));
+    var windMag = fbm(windDir) * .005 * windDir;
+    var windForce = vec4<f32>(windMag.x, 0.f, windMag.y, 1.);
 
 
 
-    tipPos.pos[globalId.x] = tipPos.pos[globalId.x] + recovery;
+    tipPos.pos[globalId.x] = tipPos.pos[globalId.x] + recovery + windForce;
     
 }

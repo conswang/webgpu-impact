@@ -26,7 +26,6 @@ export class Instancer {
     uniBuffer: GPUBuffer;
     timeBuffer: GPUBuffer;
     
-    
     bindGroup: GPUBindGroup;
     c_bindGroup: GPUBindGroup;
     
@@ -38,6 +37,7 @@ export class Instancer {
     timeData:  Float32Array
 
     size: number;
+    depthTexture!: GPUTexture;  
 
     constructor(canvas: HTMLCanvasElement){
         this.viewport = canvas;
@@ -49,7 +49,6 @@ export class Instancer {
     }
 
     async init(){
-        console.log("I'm going to shoot up a fucking walmart");
         this.adapter = await navigator.gpu.requestAdapter();
         this.device = await this.adapter.requestDevice();
         this.context = this.viewport.getContext("webgpu");
@@ -64,6 +63,16 @@ export class Instancer {
         });
 
         this.blade = new Mesh(this.device, MeshType.BLADE);
+
+        const depthTextureDesc: GPUTextureDescriptor = 
+        {
+            size: [this.viewport.width, this.viewport.height],
+            format: 'depth24plus',
+            usage: GPUTextureUsage.RENDER_ATTACHMENT
+        };
+
+        this.depthTexture = this.device.createTexture(depthTextureDesc);
+
         await this.setup();
         this.frame();
     }
@@ -131,7 +140,7 @@ export class Instancer {
         let tipPosData = new Float32Array(4*this.numInstances)
         for (let i=0; i < tipPosData.length / 4; i++){
             tipPosData[i*4] = 0.0;
-            tipPosData[i*4+1] = Math.random()*2;
+            tipPosData[i*4+1] = Math.random()*1;
             tipPosData[i*4+2] = 0.0;
             tipPosData[i*4+3] = 1.0;
         }
@@ -212,17 +221,6 @@ export class Instancer {
     }
 
     frame() {
-        console.log("in minecraft");
-
-        const depthTextureDesc: GPUTextureDescriptor = 
-        {
-            size: [this.viewport.width, this.viewport.height],
-            format: 'depth24plus',
-            usage: GPUTextureUsage.RENDER_ATTACHMENT
-        };
-
-        const depthTexture = this.device.createTexture(depthTextureDesc);
-        
         /**** Compute Step ****/
         const commandEncoder : GPUCommandEncoder = this.device.createCommandEncoder();
         const textureView : GPUTextureView = this.context.getCurrentTexture().createView();
@@ -337,7 +335,7 @@ export class Instancer {
                   storeOp : 'store'
               }], 
               depthStencilAttachment: {
-                  view: depthTexture.createView(),
+                  view: this.depthTexture.createView(),
             
                   depthClearValue: 1.0,
                   depthLoadOp: 'clear',
@@ -352,7 +350,7 @@ export class Instancer {
           renderPass.draw(this.blade.idxCount, this.numInstances, 0, 0);
           renderPass.end();
           this.device.queue.submit([commandEncoder1.finish()]);
-          this.timeData[0] += 0.1;
+          this.timeData[0] += 0.01;
           this.device.queue.writeBuffer(this.timeBuffer,   0,    this.timeData );
           requestAnimationFrame(() => this.frame());
     }
