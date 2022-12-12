@@ -28,6 +28,9 @@ This project attempts to:
 
 See the site live on [webgpu-impact.vercel.app](https://webgpu-impact.vercel.app/).
 
+Final Presentation Slide Deck:
+https://docs.google.com/presentation/d/1uKtEbVWBox0gDw1JbSN3blPA3Bx38DJ2Qxx1-XZ1H8s/edit?usp=sharing
+
 Installation
 ==================================
 `webgpu-impact` is built with [Typescript](https://www.typescriptlang.org/)
