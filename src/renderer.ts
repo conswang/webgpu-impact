@@ -5,7 +5,7 @@ import toonShader from "./shaders/toonFrag.wgsl"
 import outlineShader from "./shaders/outline.wgsl"
 import { Mesh } from "./types/mesh";
 import { Camera } from "./types/camera";
-import { mat4, vec4 } from "gl-matrix"
+import { mat4, vec3, vec4 } from "gl-matrix"
 import { threadId } from "worker_threads";
 import { Light } from "./types/light";
 import { inputs } from "./types/inputs";
@@ -48,7 +48,7 @@ export class Renderer {
         this.size[1] = canvas.clientHeight;
         this.camera = new Camera(Math.PI / 4, canvas.width, canvas.height, 
             0.1, 50.0, [0, 0, -5], [0, 0, 0], [0, 1, 0]);
-        this.light = new Light([1.0, 2.0, 0.0], [1.0, 1.0, 1.0]);
+        this.light = new Light([0.0, 0.0, 5.0], [1.0, 1.0, 1.0]);
     }
 
     async initialize() {
@@ -57,6 +57,9 @@ export class Renderer {
         this.createAssets();
 
         await this.mesh.createTexture(this.device, "https://imgs.smoothradio.com/images/191589?width=1200&crop=1_1&signature=KHg-WnaLlH9KsZwE-qYgxTkaSpU=");
+        // await this.mesh.createTexture(this.device, "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTQPRerL86ZrDuvBG8V1kKfSAf4TFZq_sEHRGE1PVaPpf_K1TlmBxJrW7rA7evUcSd2bzk&usqp=CAU");
+        // await this.mesh.createTexture(this.device, "https://previews.123rf.com/images/aruba2000/aruba20001611/aruba2000161100262/68716903-old-red-brick-wall-square-texture-cracked-brickwall-frame-background-grungy-stonewall-surface-red-br.jpg");
+        // await this.mesh.createTexture(this.device, "https://previews.123rf.com/images/andreykuzmin/andreykuzmin1505/andreykuzmin150500048/39941219-metal-square-plate-with-boltheads-isolated.jpg");
 
         await this.makePipeline();
 
@@ -244,6 +247,7 @@ export class Renderer {
     frame = () => {
         this.camera.updateAttributes(inputs, 0.1);
         this.mesh.rotateMesh();
+        vec3.rotateY(this.light.pos, this.light.pos, [0, 0, 0], this.timeStep);
         this.render();
         requestAnimationFrame(this.frame);
         this.time += this.timeStep;

@@ -1,5 +1,5 @@
 import { time } from "console";
-import { vec2, vec3, vec4, mat4 } from "gl-matrix"
+import { vec2, vec3, vec4, mat4, quat } from "gl-matrix"
 import { KeyboardInputs } from "./inputs";
 import { eyetext, reftext, looktext, uptext, righttext } from "../main";
 import { stringify } from "querystring";
@@ -16,9 +16,6 @@ export class Camera {
     up: vec3 = vec3.create()
     right: vec3 = vec3.create()
     look: vec3 = vec3.create()
-
-    theta: number = 0
-    phi: number = 0
 
     constructor(fovy: number, w: number, h: number, nearClip: number,
         farClip: number, eye: vec3, ref: vec3, up: vec3) {
@@ -40,53 +37,31 @@ export class Camera {
         vec3.normalize(this.right, this.right);
     }
 
-    calculateRotation() {
-        let rightVec : vec3 = vec3.create();
-        vec3.set(rightVec, 1, 0, 0);
-
-        let upVec : vec3 = vec3.create();
-        vec3.set(upVec, 0, 1, 0);
-
-        let rightRot : mat4 = mat4.create();
-        mat4.rotate(rightRot, rightRot, this.phi, rightVec);
-
-        let upRot : mat4 = mat4.create();
-        mat4.rotate(upRot, upRot, this.theta, upVec);
-
-        let lookVec4 : vec4 = vec4.create();
-        vec4.set(lookVec4, 0, 0, 1, 0);
-        vec4.transformMat4(lookVec4, lookVec4, upRot);
-        vec4.transformMat4(lookVec4, lookVec4, rightRot);
-        vec3.set(this.look, lookVec4[0], lookVec4[1], lookVec4[2]);
-
-        let upVec4 : vec4 = vec4.create();
-        vec4.set(upVec4, 0, 1, 0, 0);
-        vec4.transformMat4(upVec4, upVec4, rightRot);
-        vec3.set(this.up, upVec4[0], upVec4[1], upVec4[2]);
-
-        vec3.cross(this.right, this.look, this.up);
-
-        vec3.normalize(this.look, this.look);
-        vec3.normalize(this.up, this.up);
-        vec3.normalize(this.right, this.right);
-
-        vec3.add(this.ref, this.eye, this.look);
-    }
-
     updateAttributes(inputs : KeyboardInputs, timeStep : number) {
+        let factor : number = timeStep * 0.1;
         if (inputs.up) {
-            this.phi -= timeStep * 0.1;
+            var rotate : vec4 = vec4.create();
+            quat.setAxisAngle(rotate, this.right, factor);
+            vec3.transformQuat(this.up, this.up, rotate);
+            vec3.transformQuat(this.look, this.look, rotate);
         }
         if (inputs.down) {
-            this.phi += timeStep * 0.1;
+            var rotate : vec4 = vec4.create();
+            quat.setAxisAngle(rotate, this.right, -factor);
+            vec3.transformQuat(this.up, this.up, rotate);
+            vec3.transformQuat(this.look, this.look, rotate);
         }
         if (inputs.left) {
-            this.theta += timeStep * 0.1;
-            console.log(this.theta);
+            var rotate : vec4 = vec4.create();
+            quat.setAxisAngle(rotate, this.up, factor);
+            vec3.transformQuat(this.right, this.right, rotate);
+            vec3.transformQuat(this.look, this.look, rotate);
         }
         if (inputs.right) {
-            this.theta -= timeStep * 0.1;
-            console.log(this.theta);
+            var rotate : vec4 = vec4.create();
+            quat.setAxisAngle(rotate, this.up, -factor);
+            vec3.transformQuat(this.right, this.right, rotate);
+            vec3.transformQuat(this.look, this.look, rotate);
         }
         if (inputs.w) {
             let scaledLook : vec3 = vec3.create();
@@ -124,12 +99,6 @@ export class Camera {
             vec3.subtract(this.eye, this.eye, scaledUp);
             vec3.add(this.ref, this.eye, this.look);
         }
-        this.calculateRotation();
-        // console.log("EYE: ", this.eye[0], this.eye[1], this.eye[2]);
-        // console.log("REF: ", this.ref[0], this.ref[1], this.ref[2]);
-        // console.log("UP: ", this.up[0], this.up[1], this.up[2]);
-        // console.log("RIGHT: ", this.right[0], this.right[1], this.right[2]);
-        // console.log("LOOK: ", this.look[0], this.look[1], this.look[2]);
         eyetext.innerText = "EYE : " + String(this.eye[0]) + ", " + String(this.eye[1]) + ", " + String(this.eye[2]);
         reftext.innerText = "REF : " + String(this.ref[0]) + ", " + String(this.ref[1]) + ", " + String(this.ref[2]);
         looktext.innerText = "LOOK : " + String(this.look[0]) + ", " + String(this.look[1]) + ", " + String(this.look[2]);
@@ -146,7 +115,12 @@ export class Camera {
 
     view() : mat4 {
         var view : mat4 = mat4.create();
-        mat4.lookAt(view, this.eye, this.ref, this.up);
+        mat4.set(view, this.right[0], this.up[0], this.look[0], 0,
+                        this.right[1], this.up[1], this.look[1], 0,
+                        this.right[2], this.up[2], this.look[2], 0,
+                        0, 0, 0, 1);
+        mat4.translate(view, view, this.eye);
+        // mat4.lookAt(view, this.eye, this.ref, this.up);
         return view;
     }
 
