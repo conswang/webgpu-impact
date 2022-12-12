@@ -7,6 +7,13 @@ interface Vertex {
     uv : vec2 | undefined
 }
 
+export enum MeshType {
+    CUBE = 1,
+    BLADE,
+    PLANE,
+    ARB,
+}
+
 export class Mesh {
     buffer: GPUBuffer
     bufferLayout: GPUVertexBufferLayout
@@ -19,9 +26,25 @@ export class Mesh {
     vertDataVBO!: Float32Array
     idxDataVBO!: Uint32Array
 
-    constructor(device: GPUDevice) {
+    constructor(device: GPUDevice, type: MeshType) {
         // x y r g b
-        this.createCube();
+        switch(type) {
+            case MeshType.CUBE:{
+                this.createCube();
+                break;
+            }
+            case MeshType.BLADE:{
+                this.createBlade();
+                break;
+            }
+            case MeshType.PLANE:{
+                this.createPlane();
+                break;
+            }
+            default:{
+                console.log("Mesh type not yet implemented");
+            }
+        }
 
         this.populateVBO();
 
@@ -43,12 +66,12 @@ export class Mesh {
             attributes: [
                 {
                     shaderLocation: 0,
-                    format: "float32x3",
+                    format: 'float32x3',
                     offset: 0
                 },
                 {
                     shaderLocation: 1,
-                    format: "float32x3",
+                    format: 'float32x3',
                     offset: 12
                 }
             ]
@@ -177,6 +200,25 @@ export class Mesh {
         this.addFace(f3, [1.0, 0.0, 1.0]);
         this.addFace(f4, [1.0, 1.0, 0.0]);
         this.addFace(f5, [0.0, 1.0, 1.0]);
+    }
+
+    createBlade() {
+        let f0 : Array<Vertex> = new Array<Vertex>();
+        f0.push({pos: [-0.1, -1.0, 0.0], col: [0, 1.0, 0.0], uv: undefined});
+        f0.push({pos: [0.0, 1.0, 0.0], col: [.1, -1.0, 0.0], uv: undefined});
+        f0.push({pos: [.1, -1.0, 0.0], col: [-.1, -1.0, 0.0], uv: undefined});
+
+        this.addFace(f0, [0.2, 0.7, 0.4]);
+    }
+
+    createPlane() {
+        let f0 : Array<Vertex> = new Array<Vertex>();
+        f0.push({pos: [-10.0, -1.0, 10.0], col: [0., 1, 0.], uv: undefined});
+        f0.push({pos: [10.0, -1.0, 10.0], col: [0., 1, 0.], uv: undefined});
+        f0.push({pos: [10.0, -1.0, -10.0], col: [0., 1, 0.], uv: undefined});
+        f0.push({pos: [-10.0, -1.0, -10.0], col: [0., 1, 0.], uv: undefined});
+
+        this.addFace(f0, [0.2, 0.7, 0.4]);
     }
 }
 

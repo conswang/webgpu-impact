@@ -2,6 +2,7 @@ import shader from "./shaders/shaders.wgsl"
 import { Mesh } from "./types/mesh";
 import { Camera } from "./types/camera";
 import { mat4 } from "gl-matrix"
+import { MeshType } from "./types/mesh";
 
 export class Renderer {
     canvas: HTMLCanvasElement;
@@ -16,10 +17,13 @@ export class Renderer {
     uniformBuffer!: GPUBuffer;
     bindGroup!: GPUBindGroup;
     pipeline!: GPURenderPipeline;
-
+    
     // Assets
     mesh!: Mesh;
     camera: Camera;
+
+    // Depth and Color Textures
+    depthTexture!: GPUTexture;    
 
     // Time
     time: number = 0
@@ -38,7 +42,7 @@ export class Renderer {
 
         await this.makePipeline();
 
-        this.render();
+        requestAnimationFrame(this.render);
     }
 
     async setupDevice() {
@@ -118,10 +122,16 @@ export class Renderer {
                 format: "depth24plus"
             }
         });
+
+        this.depthTexture = this.device.createTexture({
+            size: [this.canvas.clientWidth, this.canvas.clientHeight],
+            format: 'depth24plus',
+            usage: GPUTextureUsage.RENDER_ATTACHMENT
+        });
     }
 
     createAssets() {
-        this.mesh = new Mesh(this.device);
+        this.mesh = new Mesh(this.device, MeshType.BLADE);
     }
 
     render = () => {
@@ -130,11 +140,6 @@ export class Renderer {
         this.device.queue.writeBuffer(this.uniformBuffer, 64, <ArrayBuffer>this.camera.view());
         this.device.queue.writeBuffer(this.uniformBuffer, 128, <ArrayBuffer>this.camera.project());
         
-        const depthTexture = this.device.createTexture({
-            size: [this.canvas.clientWidth, this.canvas.clientHeight],
-            format: 'depth24plus',
-            usage: GPUTextureUsage.RENDER_ATTACHMENT
-          });
         const commandEncoder : GPUCommandEncoder = this.device.createCommandEncoder();
         const textureView : GPUTextureView = this.context.getCurrentTexture().createView();
         const renderPass : GPURenderPassEncoder = commandEncoder.beginRenderPass({
@@ -145,7 +150,7 @@ export class Renderer {
                 storeOp : "store"
             }], 
             depthStencilAttachment: {
-                view: depthTexture.createView(),
+                view: this.depthTexture.createView(),
           
                 depthClearValue: 1.0,
                 depthLoadOp: 'clear',
