@@ -24,6 +24,8 @@ This project attempts to:
 1. Provide a WebGPU implementation of a non-photorealistic renderer. This will be done by implementing the non-PBR shaders as described in this article: [Blender NPR: Recreating the Genshin Impact Shader](https://www.artstation.com/blogs/bjayers/9oOD/blender-npr-recreating-the-genshin-impact-shader) using vertex and fragment shaders
 2. Enrichen the ecosystem of compute shader applications in WebGPU by rendering real-time grass according to this paper: [Responsive Real-Time Grass Rendering for General 3D Scenes](https://www.cg.tuwien.ac.at/research/publications/2017/JAHRMANN-2017-RRTG/JAHRMANN-2017-RRTG-draft.pdf)
 
+See the site live on [webgpu-impact.vercel.app](https://webgpu-impact.vercel.app/).
+
 Installation
 ==================================
 `webgpu-impact` is built with [Typescript](https://www.typescriptlang.org/)
@@ -64,6 +66,12 @@ UV Texturing
 
 Grass Instance Rendering
 
+Grass with recovery forces:  
+![](images/recoveryForces.gif)
+
+Grass with ambient noise:  
+![](images/ambientGrass.gif)
+
 ### Test Scenes (Todo)
 
 Future Direction
@@ -74,3 +82,5 @@ Future Direction
 
 Bloopers
 ==================================
+Depth buffer fail  
+![](images/blooper1.gif)
