@@ -64,6 +64,9 @@ GLTF Loading
 
 UV Texturing
 
+UV textured primitive with posterize shader:  
+<img src="images/uvposterize.png" width="600">
+
 Grass Instance Rendering
 
 Grass with recovery forces:  
