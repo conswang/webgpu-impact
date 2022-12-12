@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Renderer } from "../rendering/renderer";
 import { Instancer } from "../rendering/instancer";
+import {FpsView} from "react-fps";
 
 export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -17,8 +18,11 @@ export default function Home() {
 
   }, [canvasRef, canvasRef2]);
 
-  return <div>
-      <canvas width="800" height="600" ref={canvasRef}/>
-      <canvas width="800" height="600" ref={canvasRef2} style={{position: "relative", top: -600}}/>
-  </div>;
+  return <>
+    <FpsView />
+    <div>
+        <canvas width="800" height="600" ref={canvasRef}/>
+        <canvas width="800" height="600" ref={canvasRef2} style={{position: "relative", top: -600}}/>
+    </div>
+  </>
 }
