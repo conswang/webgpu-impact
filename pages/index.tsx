@@ -7,22 +7,18 @@ export default function Home() {
   const canvasRef2 = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
-    if (canvasRef) {
-      const renderer : Renderer = new Renderer(canvasRef.current);
-      //renderer.initialize();
-    }
-    if (canvasRef2){
-      const instancer: Instancer = new Instancer(canvasRef2.current);
+    if (canvasRef && canvasRef2) {
+      const instancer = new Instancer(canvasRef.current);
       instancer.init();
-      //instancer.frame();
-    }
-    
 
-  }, [canvasRef]);
+      const renderer = new Renderer(canvasRef2.current);
+      renderer.initialize();
+    }
+
+  }, [canvasRef, canvasRef2]);
 
   return <div>
-      <h1>Hello triangle</h1>
-      <canvas width="800" height="600" ref={canvasRef2}/>
       <canvas width="800" height="600" ref={canvasRef}/>
+      <canvas width="800" height="600" ref={canvasRef2} style={{position: "relative", top: -600}}/>
   </div>;
 }

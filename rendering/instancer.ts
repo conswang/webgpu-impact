@@ -1,9 +1,9 @@
 import shader from "./shaders/instance.wgsl"
 import computeShader from "./shaders/compute.wgsl"
 import floorShader from "./shaders/floor.wgsl"
-import { Mesh } from "./types/mesh";
+import { Mesh } from "./types/grassMesh";
 import { Camera } from "./types/camera";
-import { MeshType } from "./types/mesh";
+import { MeshType } from "./types/grassMesh";
 import { buffer } from "stream/consumers";
 import internal from "stream";
 import { vec3 } from "gl-matrix";

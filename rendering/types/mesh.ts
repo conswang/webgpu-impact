@@ -1,50 +1,35 @@
 import { throws } from "assert";
-import { vec3, vec2 } from "gl-matrix"
+import { vec3, vec2, mat4 } from "gl-matrix"
+import { Texture } from "./texture"
+import { isArrayLiteralExpression } from "typescript";
 
 interface Vertex {
     pos : vec3
-    col : vec3 | undefined
-    uv : vec2 | undefined
-}
-
-export enum MeshType {
-    CUBE = 1,
-    BLADE,
-    PLANE,
-    ARB,
+    nor : vec3
+    uv : vec2
 }
 
 export class Mesh {
-    buffer: GPUBuffer
-    bufferLayout: GPUVertexBufferLayout
+    buffer: GPUBuffer;
+    bufferLayout: GPUVertexBufferLayout;
 
     vertCount: number = 0
     idxCount: number = 0
     positions: Array<vec3> = new Array<vec3>()
-    colors: Array<vec3> = new Array<vec3>()
+    normals: Array<vec3> = new Array<vec3>()
+    uvs: Array<vec2> = new Array<vec2>()
     faces: Array<Face> = new Array<Face>()
-    vertDataVBO!: Float32Array
-    idxDataVBO!: Uint32Array
+    texture: Texture | undefined = undefined
 
-    constructor(device: GPUDevice, type: MeshType) {
-        // x y r g b
-        switch(type) {
-            case MeshType.CUBE:{
-                this.createCube();
-                break;
-            }
-            case MeshType.BLADE:{
-                this.createBlade();
-                break;
-            }
-            case MeshType.PLANE:{
-                this.createPlane();
-                break;
-            }
-            default:{
-                console.log("Mesh type not yet implemented");
-            }
-        }
+    vertDataVBO!: Float32Array;
+    idxDataVBO!: Uint32Array;
+
+    translate: vec3 = vec3.create()
+    rotate: vec3 = vec3.create()
+
+    constructor(device: GPUDevice) {
+        // x y r g b        
+        this.createCube();
 
         this.populateVBO();
 
@@ -62,50 +47,59 @@ export class Mesh {
 
 
         this.bufferLayout = {
-            arrayStride: 24,
+            arrayStride: 32,
             attributes: [
                 {
                     shaderLocation: 0,
-                    format: 'float32x3',
+                    format: "float32x3",
                     offset: 0
                 },
                 {
                     shaderLocation: 1,
-                    format: 'float32x3',
+                    format: "float32x3",
                     offset: 12
+                },
+                {
+                    shaderLocation: 2,
+                    format: "float32x2",
+                    offset: 24
                 }
             ]
         }
     }
 
+    async createTexture(device: GPUDevice, filePath: string) {
+        this.texture = new Texture(filePath);
+        await this.texture.create(device);
+    }
+
     addVertex(vert: Vertex) {
         console.log("adding vertex");
         console.log(vert.pos);
-        console.log(vert.col);
+        console.log(vert.nor);
+        console.log(vert.uv);
         this.positions.push(vert.pos);
-        this.colors.push(vert.col!);
+        this.normals.push(vert.nor);
+        this.uvs.push(vert.uv!);
         this.vertCount++;
     }
 
-    addFace(verts: Array<Vertex>, col?: vec3) {
+    addFace(verts: Array<Vertex>) {
         let indices : Array<number> = new Array<number>();
         for (let i = 0; i < verts.length; i++){
             indices.push(this.vertCount);
             this.addVertex(verts[i]);
         }
-        if (col) {
-            this.faces.push(new Face(indices, col));
-        } else {
-            this.faces.push(new Face(indices));
-        }
+        this.faces.push(new Face(indices));
     }
 
-    addFaceIndices(indices: Array<number>, col?: vec3) {
-        if (col) {
-            this.faces.push(new Face(indices, col));
-        } else {
-            this.faces.push(new Face(indices));
-        }
+    addFaceIndices(indices: Array<number>) {
+        this.faces.push(new Face(indices));
+    }
+
+    rotateMesh() {
+        // vec3.rotateY(this.rotate, this.rotate, [0, 0, 0], 0.01);
+        this.rotate[1] += 0.01;
     }
 
     populateVBO() {
@@ -116,33 +110,47 @@ export class Mesh {
 
             // Fan out method per face
             for (let j = 0; j < currFace.vertCount - 2; j++){
-                const col1 : vec3 = (currFace.color != undefined) ? currFace.color! : this.colors[currFace.verts[0]];
-                const col2 : vec3 = (currFace.color != undefined) ? currFace.color! : this.colors[currFace.verts[j + 1]];
-                const col3 : vec3 = (currFace.color != undefined) ? currFace.color! : this.colors[currFace.verts[j + 2]];
+                const pos1 : vec3 = this.positions[currFace.verts[0]];
+                const pos2 : vec3 = this.positions[currFace.verts[j + 1]];
+                const pos3 : vec3 = this.positions[currFace.verts[j + 2]];
+
+                const nor1 : vec3 = this.normals[currFace.verts[0]];
+                const nor2 : vec3 = this.normals[currFace.verts[j + 1]];
+                const nor3 : vec3 = this.normals[currFace.verts[j + 2]];
+
+                const uv1 : vec2 = this.uvs[currFace.verts[0]];
+                const uv2 : vec2 = this.uvs[currFace.verts[j + 1]];
+                const uv3 : vec2 = this.uvs[currFace.verts[j + 2]];
 
                 // Vert 0
-                verts.push(this.positions[currFace.verts[0]][0]);
-                verts.push(this.positions[currFace.verts[0]][1]);
-                verts.push(this.positions[currFace.verts[0]][2]);
-                verts.push(col1[0]);
-                verts.push(col1[1]);
-                verts.push(col1[2]);
+                verts.push(pos1[0]);
+                verts.push(pos1[1]);
+                verts.push(pos1[2]);
+                verts.push(nor1[0]);
+                verts.push(nor1[1]);
+                verts.push(nor1[2]);
+                verts.push(uv1[0]);
+                verts.push(uv1[1]);
 
                 // Vert j + 1
-                verts.push(this.positions[currFace.verts[j + 1]][0]);
-                verts.push(this.positions[currFace.verts[j + 1]][1]);
-                verts.push(this.positions[currFace.verts[j + 1]][2]);
-                verts.push(col2[0]);
-                verts.push(col2[1]);
-                verts.push(col2[2]);
+                verts.push(pos2[0]);
+                verts.push(pos2[1]);
+                verts.push(pos2[2]);
+                verts.push(nor2[0]);
+                verts.push(nor2[1]);
+                verts.push(nor2[2]);
+                verts.push(uv2[0]);
+                verts.push(uv2[1]);
                                 
                 // Vert j + 2
-                verts.push(this.positions[currFace.verts[j + 2]][0]);
-                verts.push(this.positions[currFace.verts[j + 2]][1]);
-                verts.push(this.positions[currFace.verts[j + 2]][2]);
-                verts.push(col3[0]);
-                verts.push(col3[1]);
-                verts.push(col3[2]);
+                verts.push(pos3[0]);
+                verts.push(pos3[1]);
+                verts.push(pos3[2]);
+                verts.push(nor3[0]);
+                verts.push(nor3[1]);
+                verts.push(nor3[2]);
+                verts.push(uv3[0]);
+                verts.push(uv3[1]);
 
                 this.idxCount += 3;
                 console.log("Adding Triangle");
@@ -157,82 +165,68 @@ export class Mesh {
         console.log(this.idxCount);
     }
 
+    getModelMatrix() : mat4 {
+        let model : mat4 = mat4.create();
+        mat4.rotate(model, model, this.rotate[0], [1, 0, 0]);
+        mat4.rotate(model, model, this.rotate[1], [0, 1, 0]);
+        mat4.rotate(model, model, this.rotate[2], [0, 0, 1]);
+        mat4.translate(model, model, this.translate);
+        return model;
+    }
+
     createCube() {
         let f0 : Array<Vertex> = new Array<Vertex>();
-        f0.push({pos: [-1.0, -1.0, -1.0], col: [0.0, 1.0, 0.0], uv: undefined});
-        f0.push({pos: [1.0, -1.0, -1.0], col: [1.0, 0.0, 0.0], uv: undefined});
-        f0.push({pos: [1.0, 1.0, -1.0], col: [0.0, 0.0, 1.0], uv: undefined});
-        f0.push({pos: [-1.0, 1.0, -1.0], col: [0.0, 1.0, 1.0], uv: undefined});
+        f0.push({pos: [-1.0, -1.0, -1.0], nor: [0.0, 0.0, -1.0], uv: [0.0, 0.0]});
+        f0.push({pos: [1.0, -1.0, -1.0], nor: [0.0, 0.0, -1.0], uv: [0.0, 1.0]});
+        f0.push({pos: [1.0, 1.0, -1.0], nor: [0.0, 0.0, -1.0], uv: [1.0, 1.0]});
+        f0.push({pos: [-1.0, 1.0, -1.0], nor: [0.0, 0.0, -1.0], uv: [1.0, 0.0]});
 
         let f1 : Array<Vertex> = new Array<Vertex>();
-        f1.push({pos: [-1.0, -1.0, 1.0], col: [0.0, 1.0, 0.0], uv: undefined});
-        f1.push({pos: [1.0, -1.0, 1.0], col: [1.0, 0.0, 0.0], uv: undefined});
-        f1.push({pos: [1.0, 1.0, 1.0], col: [0.0, 0.0, 1.0], uv: undefined});
-        f1.push({pos: [-1.0, 1.0, 1.0], col: [0.0, 1.0, 1.0], uv: undefined});
+        f1.push({pos: [-1.0, -1.0, 1.0], nor: [0.0, 0.0, 1.0], uv: [0.0, 0.0]});
+        f1.push({pos: [1.0, -1.0, 1.0], nor: [0.0, 0.0, 1.0], uv: [0.0, 1.0]});
+        f1.push({pos: [1.0, 1.0, 1.0], nor: [0.0, 0.0, 1.0], uv: [1.0, 1.0]});
+        f1.push({pos: [-1.0, 1.0, 1.0], nor: [0.0, 0.0, 1.0], uv: [1.0, 0.0]});
 
         let f2 : Array<Vertex> = new Array<Vertex>();
-        f2.push({pos: [-1.0, -1.0, -1.0], col: [0.0, 1.0, 0.0], uv: undefined});
-        f2.push({pos: [1.0, -1.0, -1.0], col: [1.0, 0.0, 0.0], uv: undefined});
-        f2.push({pos: [1.0, -1.0, 1.0], col: [0.0, 0.0, 1.0], uv: undefined});
-        f2.push({pos: [-1.0, -1.0, 1.0], col: [0.0, 1.0, 1.0], uv: undefined});
+        f2.push({pos: [-1.0, -1.0, -1.0], nor: [0.0, -1.0, 0.0], uv: [0.0, 0.0]});
+        f2.push({pos: [1.0, -1.0, -1.0], nor: [0.0, -1.0, 0.0], uv: [0.0, 1.0]});
+        f2.push({pos: [1.0, -1.0, 1.0], nor: [0.0, -1.0, 0.0], uv: [1.0, 1.0]});
+        f2.push({pos: [-1.0, -1.0, 1.0], nor: [0.0, -1.0, 0.0], uv: [1.0, 0.0]});
 
         let f3 : Array<Vertex> = new Array<Vertex>();
-        f3.push({pos: [-1.0, 1.0, -1.0], col: [0.0, 1.0, 0.0], uv: undefined});
-        f3.push({pos: [1.0, 1.0, -1.0], col: [1.0, 0.0, 0.0], uv: undefined});
-        f3.push({pos: [1.0, 1.0, 1.0], col: [0.0, 0.0, 1.0], uv: undefined});
-        f3.push({pos: [-1.0, 1.0, 1.0], col: [0.0, 1.0, 1.0], uv: undefined});
+        f3.push({pos: [-1.0, 1.0, -1.0], nor: [0.0, 1.0, 0.0], uv: [0.0, 0.0]});
+        f3.push({pos: [1.0, 1.0, -1.0], nor: [0.0, 1.0, 0.0], uv: [0.0, 1.0]});
+        f3.push({pos: [1.0, 1.0, 1.0], nor: [0.0, 1.0, 0.0], uv: [1.0, 1.0]});
+        f3.push({pos: [-1.0, 1.0, 1.0], nor: [0.0, 1.0, 0.0], uv: [1.0, 0.0]});
 
         let f4 : Array<Vertex> = new Array<Vertex>();
-        f4.push({pos: [-1.0, -1.0, -1.0], col: [0.0, 1.0, 0.0], uv: undefined});
-        f4.push({pos: [-1.0, 1.0, -1.0], col: [1.0, 0.0, 0.0], uv: undefined});
-        f4.push({pos: [-1.0, 1.0, 1.0], col: [0.0, 0.0, 1.0], uv: undefined});
-        f4.push({pos: [-1.0, -1.0, 1.0], col: [0.0, 1.0, 1.0], uv: undefined});
+        f4.push({pos: [-1.0, -1.0, -1.0], nor: [-1.0, 0.0, 0.0], uv: [0.0, 0.0]});
+        f4.push({pos: [-1.0, 1.0, -1.0], nor: [-1.0, 0.0, 0.0], uv: [0.0, 1.0]});
+        f4.push({pos: [-1.0, 1.0, 1.0], nor: [-1.0, 0.0, 0.0], uv: [1.0, 1.0]});
+        f4.push({pos: [-1.0, -1.0, 1.0], nor: [-1.0, 0.0, 0.0], uv: [1.0, 0.0]});
 
         let f5 : Array<Vertex> = new Array<Vertex>();
-        f5.push({pos: [1.0, -1.0, -1.0], col: [0.0, 1.0, 0.0], uv: undefined});
-        f5.push({pos: [1.0, 1.0, -1.0], col: [1.0, 0.0, 0.0], uv: undefined});
-        f5.push({pos: [1.0, 1.0, 1.0], col: [0.0, 0.0, 1.0], uv: undefined});
-        f5.push({pos: [1.0, -1.0, 1.0], col: [0.0, 1.0, 1.0], uv: undefined});
+        f5.push({pos: [1.0, -1.0, -1.0], nor: [1.0, 0.0, 0.0], uv: [0.0, 0.0]});
+        f5.push({pos: [1.0, 1.0, -1.0], nor: [1.0, 0.0, 0.0], uv: [0.0, 1.0]});
+        f5.push({pos: [1.0, 1.0, 1.0], nor: [1.0, 0.0, 0.0], uv: [1.0, 1.0]});
+        f5.push({pos: [1.0, -1.0, 1.0], nor: [1.0, 0.0, 0.0], uv: [1.0, 0.0]});
 
-        this.addFace(f0, [1.0, 0.0, 0.0]);
-        this.addFace(f1, [0.0, 1.0, 0.0]);
-        this.addFace(f2, [0.0, 0.0, 1.0]);
-        this.addFace(f3, [1.0, 0.0, 1.0]);
-        this.addFace(f4, [1.0, 1.0, 0.0]);
-        this.addFace(f5, [0.0, 1.0, 1.0]);
-    }
-
-    createBlade() {
-        let f0 : Array<Vertex> = new Array<Vertex>();
-        f0.push({pos: [-0.1, -1.0, 0.0], col: [0, 1.0, 0.0], uv: undefined});
-        f0.push({pos: [0.0, 1.0, 0.0], col: [.1, -1.0, 0.0], uv: undefined});
-        f0.push({pos: [.1, -1.0, 0.0], col: [-.1, -1.0, 0.0], uv: undefined});
-
-        this.addFace(f0, [0.2, 0.7, 0.4]);
-    }
-
-    createPlane() {
-        let f0 : Array<Vertex> = new Array<Vertex>();
-        f0.push({pos: [-10.0, -1.0, 10.0], col: [0., 1, 0.], uv: undefined});
-        f0.push({pos: [10.0, -1.0, 10.0], col: [0., 1, 0.], uv: undefined});
-        f0.push({pos: [10.0, -1.0, -10.0], col: [0., 1, 0.], uv: undefined});
-        f0.push({pos: [-10.0, -1.0, -10.0], col: [0., 1, 0.], uv: undefined});
-
-        this.addFace(f0, [0.2, 0.7, 0.4]);
+        this.addFace(f0);
+        this.addFace(f1);
+        this.addFace(f2);
+        this.addFace(f3);
+        this.addFace(f4);
+        this.addFace(f5);
     }
 }
 
 class Face {
     vertCount: number = 0
     verts: Array<number> = new Array()
-    color: vec3 | undefined
 
-    constructor(verts: Array<number>, col?: vec3) {
+    constructor(verts: Array<number>) {
         for (let i = 0; i < verts.length; i++){
             this.verts.push(verts[i]);
-        }
-        if (col) {
-            this.color = col;
         }
         this.vertCount = verts.length;
     }
