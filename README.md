@@ -4,8 +4,7 @@ WebGPU Non-PBR Renderer
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Project 5**
 
 * Constance Wang
-  * [LinkedIn]
-  * [Website]
+  * https://www.linkedin.com/in/conswang/
 
 * Eyad Almoamen
   * https://www.linkedin.com/in/eyadalmoamen/
