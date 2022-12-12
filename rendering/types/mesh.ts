@@ -10,6 +10,7 @@ interface Vertex {
 export enum MeshType {
     CUBE = 1,
     BLADE,
+    PLANE,
     ARB,
 }
 
@@ -34,6 +35,10 @@ export class Mesh {
             }
             case MeshType.BLADE:{
                 this.createBlade();
+                break;
+            }
+            case MeshType.PLANE:{
+                this.createPlane();
                 break;
             }
             default:{
@@ -206,6 +211,15 @@ export class Mesh {
         this.addFace(f0, [0.2, 0.7, 0.4]);
     }
 
+    createPlane() {
+        let f0 : Array<Vertex> = new Array<Vertex>();
+        f0.push({pos: [-10.0, -1.0, 10.0], col: [0., 1, 0.], uv: undefined});
+        f0.push({pos: [10.0, -1.0, 10.0], col: [0., 1, 0.], uv: undefined});
+        f0.push({pos: [10.0, -1.0, -10.0], col: [0., 1, 0.], uv: undefined});
+        f0.push({pos: [-10.0, -1.0, -10.0], col: [0., 1, 0.], uv: undefined});
+
+        this.addFace(f0, [0.2, 0.7, 0.4]);
+    }
 }
 
 class Face {

@@ -1,5 +1,6 @@
 import shader from "./shaders/instance.wgsl"
 import computeShader from "./shaders/compute.wgsl"
+import floorShader from "./shaders/floor.wgsl"
 import { Mesh } from "./types/mesh";
 import { Camera } from "./types/camera";
 import { MeshType } from "./types/mesh";
@@ -17,6 +18,7 @@ export class Instancer {
     presentationFormat: GPUTextureFormat;
     camera: Camera;
     blade: Mesh;
+    floor: Mesh;
 
     uniBuf: GPUBuffer;
     instanceBuf: GPUBuffer;
@@ -42,7 +44,7 @@ export class Instancer {
     constructor(canvas: HTMLCanvasElement){
         this.viewport = canvas;
         this.camera = new Camera(Math.PI / 4, canvas.width, canvas.height, 
-        0.1, 1000.0, [-15, 5, 50], [0, 0, 0], [0, 1, 0]);
+        0.1, 1000.0, [0, 7, 20], [0, 2, 0], [0, 1, 0]);
         this.forces = new Float32Array(4);
         this.timeData = new Float32Array(1);
 
@@ -63,6 +65,7 @@ export class Instancer {
         });
 
         this.blade = new Mesh(this.device, MeshType.BLADE);
+        this.floor = new Mesh(this.device, MeshType.PLANE);
 
         const depthTextureDesc: GPUTextureDescriptor = 
         {
@@ -119,9 +122,9 @@ export class Instancer {
         let instanceData = new Float32Array(4*this.numInstances);
 
         for (let i=0; i < instanceData.length / 4; i++){
-            instanceData[i*4] = -2 * fieldWidth + 1 * Math.random()*fieldWidth*2;
+            instanceData[i*4] = 1 * (Math.random()-.5)*fieldWidth*2;
             instanceData[i*4+1] = 0.0;
-            instanceData[i*4+2] = 2 * fieldWidth + 1 * Math.random()*fieldWidth*2;
+            instanceData[i*4+2] = 1 * (Math.random()-.5)*fieldWidth*2;
         }
         
         this.size = ((instanceData.byteLength + 3) & ~3); 
@@ -256,8 +259,52 @@ export class Instancer {
         this.device.queue.submit([commandEncoder.finish()]);
         
         /**** Fuck you I'll make another group i don't give a fuck ****/
-    
+        
+        const floorBindGroupLayout = this.device.createBindGroupLayout({
+            entries: [
+                {
+                    binding: 0, visibility: GPUShaderStage.VERTEX, buffer: {}
+                }
+            ]
+        });
+
+        //Group Bindings
+        const floorBindGroup = this.device.createBindGroup({
+            layout: floorBindGroupLayout,
+            entries: [
+                {binding: 0, resource: {buffer: this.uniBuf}}
+            ]
+        });
+
+        /**** Pipelines ****/
+        //Pipeline Layout
+        const floorPipelineLayout = this.device.createPipelineLayout({
+            bindGroupLayouts: [floorBindGroupLayout]
+        });
+
+        const floorShaderModule = this.device.createShaderModule({
+            code: floorShader
+        });
+
+        //Pipeline Creation
+        const pipeline1 = this.device.createRenderPipeline({
+            layout: floorPipelineLayout,
+            vertex: {module: floorShaderModule,
+                     entryPoint: 'vs_main',
+                     buffers: [this.floor.bufferLayout]},
+            fragment: {module: floorShaderModule,
+                       entryPoint: 'fs_main',
+                       targets: [{format: this.presentationFormat}]},
+            primitive: {topology: "triangle-list"},
+            depthStencil: {depthWriteEnabled: true,
+                           depthCompare: "less",
+                           format: "depth24plus"}
+        });
+
+        
+
         /**** RENDER PIPELINE SETUP SHIT ****/
+        //Grass fuck you
         /**** Binding Groups ****/
         //Group 0 - Scene Uniforms
         //Layouts
@@ -324,13 +371,13 @@ export class Instancer {
         });
 
         /**** Render Step ****/
-        const commandEncoder1 : GPUCommandEncoder = this.device.createCommandEncoder();
-        const textureView1 : GPUTextureView = this.context.getCurrentTexture().createView();
+        const commandEncoder0 : GPUCommandEncoder = this.device.createCommandEncoder();
+        const textureView0 : GPUTextureView = this.context.getCurrentTexture().createView();
 
-        const renderPass : GPURenderPassEncoder = commandEncoder1.beginRenderPass({
+        const renderPass0 : GPURenderPassEncoder = commandEncoder0.beginRenderPass({
               colorAttachments : [{
-                  view : textureView1,
-                  clearValue : {r : 0.1, g : 0.1, b : 0.1, a : 1.0},
+                  view : textureView0,
+                  clearValue : {r : 0.1, g : 0.6, b : 0.8, a : 1.0},
                   loadOp : 'clear',
                   storeOp : 'store'
               }], 
@@ -343,13 +390,18 @@ export class Instancer {
                 },
           })
 
-          renderPass.setPipeline(this.pipeline);
-          renderPass.setBindGroup(0, this.bindGroup);
-          renderPass.setBindGroup(1, tipBindGroup);
-          renderPass.setVertexBuffer(0, this.blade.buffer);
-          renderPass.draw(this.blade.idxCount, this.numInstances, 0, 0);
-          renderPass.end();
-          this.device.queue.submit([commandEncoder1.finish()]);
+          
+          renderPass0.setPipeline(pipeline1);
+          renderPass0.setBindGroup(0, floorBindGroup);
+          renderPass0.setVertexBuffer(0, this.floor.buffer);
+          renderPass0.draw(this.floor.idxCount, 1, 0, 0);
+          renderPass0.setPipeline(this.pipeline);
+          renderPass0.setBindGroup(0, this.bindGroup);
+          renderPass0.setBindGroup(1, tipBindGroup);
+          renderPass0.setVertexBuffer(0, this.blade.buffer);
+          renderPass0.draw(this.blade.idxCount, this.numInstances, 0, 0);
+          renderPass0.end();
+          this.device.queue.submit([commandEncoder0.finish()]);
           this.timeData[0] += 0.01;
           this.device.queue.writeBuffer(this.timeBuffer,   0,    this.timeData );
           requestAnimationFrame(() => this.frame());
