@@ -1,6 +1,8 @@
 WebGPU Non-PBR Renderer
 ==================================
 
+![](images/ambientGrass.gif)
+
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Project 5**
 
 * Constance Wang
@@ -71,9 +73,6 @@ Grass Instance Rendering
 
 Grass with recovery forces:  
 ![](images/recoveryForces.gif)
-
-Grass with ambient noise:  
-![](images/ambientGrass.gif)
 
 ### Test Scenes (Todo)
 
