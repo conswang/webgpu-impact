@@ -47,7 +47,7 @@ export class Renderer {
         this.size[0] = canvas.clientWidth;
         this.size[1] = canvas.clientHeight;
         this.camera = new Camera(Math.PI / 4, canvas.width, canvas.height, 
-            0.1, 50.0, [0, 0, -5], [0, 0, 0], [0, 1, 0]);
+            0.1, 50.0, [0, -5, -20], [0, 0, 0], [0, 1, -0.3]);
         this.light = new Light([1.0, 2.0, 0.0], [1.0, 1.0, 1.0]);
     }
 

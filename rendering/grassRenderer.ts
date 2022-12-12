@@ -1,5 +1,5 @@
 import shader from "./shaders/shaders.wgsl"
-import { Mesh } from "./types/mesh";
+import { Mesh } from "./types/grassMesh";
 import { Camera } from "./types/camera";
 import { mat4 } from "gl-matrix"
 import { MeshType } from "./types/grassMesh";
