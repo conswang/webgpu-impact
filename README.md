@@ -44,7 +44,17 @@ Grass Parameters: Forces, control points, stem positions
 
 Grass in the scene are defined as simple triangles; one vertex of that triangle also serves as the control point that the forces in the scene will act on when animated.
 
-### Performance (Todo)
+### Performance
+
+We measured the performance of our compute pipeline relative to the number of blades of grass.
+
+| Number of grass blades | Frames per second, averaged over 10 seconds |
+| ----------- | ----------- |
+| 500 | 240 |
+| 1000 | 240 |
+| 2000 | 37 |
+| 5000 | 35 |
+| 10000 | 19 |
 
 Render Pipeline
 ==================================
