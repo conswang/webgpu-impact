@@ -28,6 +28,8 @@ export class Instancer {
     readBuffer: GPUBuffer;
     uniBuffer: GPUBuffer;
     timeBuffer: GPUBuffer;
+    
+    //These are the buffers for the world space and UV cooridinates of the skybox textures
     positionBuffer: GPUBuffer;
     indicesBuffer: GPUBuffer;
     texCoordsBuffer: GPUBuffer;
@@ -35,10 +37,14 @@ export class Instancer {
     
     bindGroup: GPUBindGroup;
     c_bindGroup: GPUBindGroup;
+    
+    //This is the skybox bindgroup
     s_bindGroup: GPUBindGroup;
     
     pipeline: GPURenderPipeline;
     c_pipeline: GPUComputePipeline;
+
+    //This is the skybox pipeline
     s_pipeline: GPURenderPipeline;
     
     numInstances: number;
@@ -235,6 +241,7 @@ export class Instancer {
             arrayLayerCount: 6
         });
 
+        //Skybox Specific Texture Sampler
         let textureSampler = this.device.createSampler({
             minFilter: "linear",
             magFilter: "linear"
@@ -405,6 +412,7 @@ export class Instancer {
                     depthCompare: "less",
                     format: "depth24plus"}
         });
+    /** This marks the end of the skybox render pipeline definition **/
     };
 
     frame() {
@@ -560,7 +568,8 @@ export class Instancer {
                   depthStoreOp: 'store',
                 },
           })
-          
+        
+        //Rendering Skybox
         renderPass0.setPipeline(this.s_pipeline);
         renderPass0.setBindGroup(0, this.s_bindGroup);
         renderPass0.setVertexBuffer(0, this.positionBuffer);
@@ -569,11 +578,13 @@ export class Instancer {
         renderPass0.setIndexBuffer(this.indicesBuffer, 'uint32');
         renderPass0.drawIndexed(36, 1, 0, 0);
 
+        //Rendering Floor Plane
         renderPass0.setPipeline(pipeline1);
         renderPass0.setBindGroup(0, floorBindGroup);
         renderPass0.setVertexBuffer(0, this.floor.buffer);
         renderPass0.draw(this.floor.idxCount, 1, 0, 0);
         
+        //Rendering Grass
         renderPass0.setPipeline(this.pipeline);
         renderPass0.setBindGroup(0, this.bindGroup);
         renderPass0.setBindGroup(1, tipBindGroup);
@@ -585,43 +596,4 @@ export class Instancer {
         this.device.queue.writeBuffer(this.timeBuffer,   0,    this.timeData );
         requestAnimationFrame(() => this.frame());
     }
-}
-
-function mouseinput(elin, xa, ya, dd)
-{
-   var base = {x:xa, y:ya, d:dd};
-   var tmp  = {x:xa, y:ya, d:dd};
-   var el = elin;
-   el.addEventListener('mousedown', downListener);
-   el.addEventListener('mouseup',   upListener  );
-   el.addEventListener('mouseout',  upListener  );
-   el.addEventListener("wheel",     wheel       );
-   var start = {x:0, y:0};
-  
-   function downListener(e){
-     if (e.button !== 0 ) return; // left
-       
-     start = {x:e.pageX, y:e.pageY};
-     tmp   = {x:base.x,  y:base.y,  d:base.d };
-     el.addEventListener('mousemove', moveListener)
-   }
-   function upListener(e){
-     el.removeEventListener('mousemove', moveListener)
-   }
-   function moveListener(e){
-     //console.log('moving..');
-     const diffX = (e.pageX - start.x);
-     const diffY = (e.pageY - start.y);
-     const delta = 0.01;
-     base.x = tmp.x + diffX*delta;
-     base.y = tmp.y + diffY*delta;
-   }
-   function wheel(e){
-     base.d -= e.deltaY * 0.0001;
-   }
-  
-   this.getPos = function()
-   {
-     return base;
-   }
 }
