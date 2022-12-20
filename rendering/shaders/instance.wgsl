@@ -13,7 +13,7 @@ struct TipInfo {
 }
 
 @binding(0) @group(0) var<uniform> transform: TransformData;
-@binding(1) @group(0) var<uniform> instanceInfo: InstanceInfo;
+@binding(4) @group(0) var<uniform> instanceInfo: InstanceInfo;
 
 @binding(0) @group(1) var<uniform> tipPos: TipInfo;
 
