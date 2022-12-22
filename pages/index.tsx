@@ -21,8 +21,6 @@ export default function Home() {
     document.addEventListener('keydown', onKeyDown, false);
     document.addEventListener('keyup', onKeyUp, false);
 
-    
-
   }, [canvasRef]);
 function onKeyDown(event : KeyboardEvent)
 {
@@ -115,8 +113,18 @@ function onKeyUp(event : KeyboardEvent)
 }
 
   return <div>
+    <div>
       <h1>Hello triangle</h1>
       <canvas width="800" height="600" ref={canvasRef2}/>
       <canvas width="800" height="600" ref={canvasRef}/>
+      {/* <p id="eye">eye : </p>
+      <p id="ref">ref : </p>
+      <p id="look">look : </p>
+      <p id="up">up : </p>
+      <p id="right">right : </p>
+      <p id="light">light : </p> */}
+  </div>
+  <div id="camera-data">
+    </div>
   </div>;
 }

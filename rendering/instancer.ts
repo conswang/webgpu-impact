@@ -4,6 +4,7 @@ import floorShader from "./shaders/floor.wgsl"
 import vertShader from "./shaders/vert.wgsl"
 import fragShader from "./shaders/frag.wgsl"
 import toonShader from "./shaders/toonFrag.wgsl"
+import skyBoxShader from "./shaders/skybox.wgsl"
 import { Mesh } from "./types/mesh";
 import { Camera } from "./types/camera";
 import { VertexLayout } from "./types/mesh";
@@ -47,17 +48,25 @@ export class Instancer {
     
     // Timestamp
     timeBuffer: GPUBuffer;
+
+    // Skybox Buffers
+    skyBoxPosBuffer: GPUBuffer;
+    skyBoxIdxBuffer: GPUBuffer;
+    skyBoxTexCoordBuffer: GPUBuffer;
+    skyBoxTexIdBuffer: GPUBuffer;
     
     // Bind Groups
     bindGroup: GPUBindGroup;
     floorBindGroup: GPUBindGroup;
     grassBindGroup: GPUBindGroup;
+    skyBoxBindGroup: GPUBindGroup;
     computeBindGroup: GPUBindGroup;
     
     // Pipelines
     genericPipeline: GPURenderPipeline;
     grassPipeline: GPURenderPipeline;
     floorPipeline: GPURenderPipeline;
+    skyBoxPipeline: GPURenderPipeline
     computePipeline: GPUComputePipeline;
     
     numInstances: number;
@@ -69,6 +78,8 @@ export class Instancer {
     depthTexture!: GPUTexture;
     colorTexture!: GPUTexture;  
 
+    skyBoxTextureView: GPUTextureView;
+
     // MSAA
     samples: number = 4
 
@@ -77,7 +88,7 @@ export class Instancer {
         this.presentationSize[0] = canvas.clientWidth;
         this.presentationSize[1] = canvas.clientHeight;
         this.camera = new Camera(Math.PI / 4, canvas.width, canvas.height, 
-        0.1, 1000.0, [0, 5, -20], [0, -0.1, 1]);
+        0.1, 1000.0, [0, 5, -10], [0, -0.3, 1]);
         this.forces = new Float32Array(4);
         this.timeData = new Float32Array(1);
     }
@@ -104,6 +115,7 @@ export class Instancer {
         });
 
         await this.setup();
+        await this.setupSkyBox();
 
         await this.makePipeline();
 
@@ -253,6 +265,136 @@ export class Instancer {
             size: this.instanceBufferSize,
             usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC | GPUBufferUsage.UNIFORM
         });
+    }
+
+    async setupSkyBox(){
+        var positions =  new Float32Array([
+            -30, 30, 30,  -30,-30, 30,   30,-30, 30,   30, 30, 30,    // front
+            -30, 30,-30,  -30,-30,-30,   30,-30,-30,   30, 30,-30,    // back
+             30,-30, 30,   30,-30,-30,   30, 30,-30,   30, 30, 30,    // left
+            -30,-30, 30,  -30,-30,-30,  -30, 30,-30,  -30, 30, 30,    // right
+            -30,-30,-30,  -30,-30, 30,   30,-30, 30,   30,-30,-30,    // bottom
+            -30, 30,-30,  -30, 30, 30,   30, 30, 30,   30, 30,-30 ]); // top
+        
+        this.skyBoxPosBuffer = this.device.createBuffer({
+            size:  positions.byteLength,
+            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
+        });
+
+        this.device.queue.writeBuffer(this.skyBoxPosBuffer,  0, positions);
+        
+        //Skybox Face Vertex Coordinates
+        var indices = new Uint32Array([
+            0, 1, 2,    0, 2, 3,   
+            4, 5, 6,    4, 6, 7,
+            8, 9, 10,   8, 10,11,  
+            12,13,14, 	12,14,15,
+            16,17,18,   16,18,19,  
+            20,21,22,   20,22,23 ]);
+        
+        this.skyBoxIdxBuffer = this.device.createBuffer({
+            size:  indices.byteLength,
+            usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST
+        });
+
+        this.device.queue.writeBuffer(this.skyBoxIdxBuffer ,  0, indices  );
+        
+        //Skybox UV coordinates 
+        var texCoords  = new Float32Array([
+            0,0, 0,1, 1,1,  1,0, 
+            1,0, 1,1, 0,1,  0,0, 
+          
+            0,1, 1,1, 1,0, 0,0,
+            1,1, 0,1, 0,0, 1,0,
+          
+            0,0, 1,0, 1,1,  0,1, 
+            0,1, 1,1, 1,0, 0,0 ]);
+            
+        this.skyBoxTexCoordBuffer = this.device.createBuffer({
+            size:  texCoords.byteLength,
+            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
+        });
+
+        this.device.queue.writeBuffer(this.skyBoxTexCoordBuffer, 0, texCoords);
+        
+        //Skybox texture indices
+        var texIds = new Int32Array([
+            0, 0, 0, 0, // front
+            1, 1, 1, 1, // back
+            2, 2, 2, 2, // right
+            3, 3, 3, 3, // left
+            4, 4, 4, 4, // up
+            5, 5, 5, 5  // down
+        ]);
+
+        this.skyBoxTexIdBuffer = this.device.createBuffer({
+            size:  texIds.byteLength,
+            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
+        });
+        
+        this.device.queue.writeBuffer(this.skyBoxTexIdBuffer, 0, texIds);
+
+        /** Is it texture time? I think it's texture time. **/
+        //Writing Texture Data to a Texture
+        let imgs = [ 'https://imgs.smoothradio.com/images/191589?width=1200&crop=1_1&signature=KHg-WnaLlH9KsZwE-qYgxTkaSpU=', 
+                     'https://imgs.smoothradio.com/images/191589?width=1200&crop=1_1&signature=KHg-WnaLlH9KsZwE-qYgxTkaSpU=',
+                     'https://imgs.smoothradio.com/images/191589?width=1200&crop=1_1&signature=KHg-WnaLlH9KsZwE-qYgxTkaSpU=',
+                     'https://imgs.smoothradio.com/images/191589?width=1200&crop=1_1&signature=KHg-WnaLlH9KsZwE-qYgxTkaSpU=',
+                     'https://imgs.smoothradio.com/images/191589?width=1200&crop=1_1&signature=KHg-WnaLlH9KsZwE-qYgxTkaSpU=',
+  		             'https://imgs.smoothradio.com/images/191589?width=1200&crop=1_1&signature=KHg-WnaLlH9KsZwE-qYgxTkaSpU='
+                    ]; 
+        
+        const skyTexture = this.device.createTexture({
+            size: [1024, 1024, 6],
+            format: this.format,
+            usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.TEXTURE_BINDING
+        })
+
+        let skyTextureData = new Uint8Array( 6 * 1024 * 1024 * 4);
+
+        // scale/stretch all images 
+        for (let i=0; i<imgs.length; i++)
+        {
+          const img = document.createElement("img");
+          img.crossOrigin = "Anonymous";
+          img.src = imgs[i];
+          await img.decode();
+        
+          const imageCanvas = document.createElement('canvas');
+          imageCanvas.width =  1024; // img width;
+          imageCanvas.height = 1024; // img height;
+          const imageCanvasContext = imageCanvas.getContext('2d');
+          imageCanvasContext.drawImage(img, 0, 0, imageCanvas.width, imageCanvas.height);
+          const imageData = imageCanvasContext.getImageData(0, 0, 1024, 1024);
+        
+          for (let x=0; x<1024*1024*4; x++)
+          {
+             skyTextureData[1024*1024*4*i + x] = imageData.data[ x ];
+          }
+        }
+
+        this.device.queue.writeTexture(
+            { texture: skyTexture },
+            skyTextureData,
+            {   offset     :  0,
+                bytesPerRow:  1024* 4, // width * 4 (4 bytes per float)
+                rowsPerImage: 1024     // height
+             },
+            [ 1024  ,  1024,  6  ]   );
+        
+        this.skyBoxTextureView = skyTexture.createView({
+            format: this.format,
+            dimension: '2d-array',
+            aspect: 'all',
+            arrayLayerCount: 6
+        });
+
+        //Skybox Specific Texture Sampler
+        let textureSampler = this.device.createSampler({
+            minFilter: "linear",
+            magFilter: "linear"
+        });
+        /** End SkyBox buffers & textures **/
     }
 
     async setupDevice() {
@@ -513,6 +655,133 @@ export class Instancer {
                 count: this.samples
             }
         });
+
+        const skyBoxBindGroupLayout = this.device.createBindGroupLayout({
+            entries: [
+                {
+                    binding: 0, 
+                    visibility: GPUShaderStage.VERTEX, 
+                    buffer: {}
+                },
+                {
+                    binding: 1, 
+                    visibility: GPUShaderStage.FRAGMENT, 
+                    sampler: {}
+                },
+                {
+                    binding: 2, 
+                    visibility: GPUShaderStage.FRAGMENT, 
+                    texture: {
+                        sampleType: "float",
+                        viewDimension: "2d-array"
+                    }
+                }
+            ]
+        });
+
+        this.skyBoxBindGroup = this.device.createBindGroup({
+            layout: skyBoxBindGroupLayout,
+            entries: [
+                {
+                    binding: 0, 
+                    resource: {
+                        buffer: this.vertBuffer
+                    }
+                },
+                {
+                    binding: 1, 
+                    resource: sampler
+                },
+                {
+                    binding: 2, 
+                    resource: this.skyBoxTextureView
+                }
+            ]
+        });
+
+        const skyBoxPipelineLayout = this.device.createPipelineLayout({
+            bindGroupLayouts: [skyBoxBindGroupLayout]
+        });
+
+
+        this.skyBoxPipeline = this.device.createRenderPipeline({
+            layout: skyBoxPipelineLayout,
+            vertex: {
+                module: this.device.createShaderModule({
+                    code: skyBoxShader
+                }),
+                entryPoint: 'vs_main',
+                buffers: [
+                    { 
+                        arrayStride: 12, 
+                        attributes: [{ 
+                            shaderLocation: 0,
+                            format: "float32x3",
+                            offset: 0  
+                        }]        
+                    },
+                    { 
+                        arrayStride: 8,  
+                        attributes: [{ 
+                            shaderLocation: 1,
+                            format: "float32x2",
+                            offset: 0  
+                        }]        
+                    },
+                    { 
+                        arrayStride: 4,  
+                        attributes: [{ 
+                            shaderLocation: 2,                   
+                            format: "sint32", 
+                            offset: 0  
+                        }]        
+                    }]
+            },
+            fragment: {
+                module: this.device.createShaderModule({
+                    code: skyBoxShader
+                }),
+                entryPoint: 'fs_main',
+                targets: [{
+                    format: this.format
+                }]
+            },
+            primitive: { 
+                topology  : 'triangle-list',
+                frontFace : "ccw",
+                cullMode  : 'none',
+                stripIndexFormat: undefined 
+            },
+            depthStencil: {
+                depthWriteEnabled: true,
+                depthCompare: "less",
+                format: "depth24plus"
+            },
+            multisample: {
+                count: this.samples
+            }
+        });
+
+
+    }
+
+    resetVertBuffer(mesh: Mesh) {
+        this.vertBuffer = this.vertBuffer = this.device.createBuffer({
+            size: 64 * 4,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+        });
+
+        this.makePipeline();
+
+        var model : mat4 = mesh.getModelMatrix();
+        var normal : mat4 = mat4.create();
+        mat4.invert(normal, model);
+        mat4.transpose(normal, normal);
+
+        this.device.queue.writeBuffer(this.vertBuffer,   0,    <ArrayBuffer>model);
+        this.device.queue.writeBuffer(this.vertBuffer,   64,   <ArrayBuffer>this.camera.view());
+        this.device.queue.writeBuffer(this.vertBuffer,   128,  <ArrayBuffer>this.camera.project());  
+        this.device.queue.writeBuffer(this.vertBuffer,   192,  <ArrayBuffer>normal);
     }
 
     frame = () => {
@@ -521,7 +790,7 @@ export class Instancer {
         this.mesh.rotateMesh();
 
         this.render();
-        
+
         requestAnimationFrame(this.frame);
     }
 
@@ -530,7 +799,7 @@ export class Instancer {
         this.device.queue.writeBuffer(this.vertBuffer,   128,  <ArrayBuffer>this.camera.project());
 
         var lightPos = new Float32Array(4);
-        lightPos[0] = 5.0; lightPos[1] = 5.0; lightPos[2] = 0.0;lightPos[3] =  1.0;
+        lightPos[0] = 0.0; lightPos[1] = 5.0; lightPos[2] = 0.0;lightPos[3] =  1.0;
 
         var eyePos: Float32Array = new Float32Array(4);
         eyePos[0] = this.camera.eye[0]; eyePos[1] = this.camera.eye[1]; eyePos[2] = this.camera.eye[2];
@@ -582,51 +851,48 @@ export class Instancer {
             },
           })
 
-          // DRAWING FLOOR
-          var model : mat4 = this.floor.getModelMatrix();
-          var normal : mat4 = mat4.create();
-          mat4.invert(normal, model);
-          mat4.transpose(normal, normal);
+        var model : mat4 = this.floor.getModelMatrix();
+        var normal : mat4 = mat4.create();
+        mat4.invert(normal, model);
+        mat4.transpose(normal, normal);
 
-          this.device.queue.writeBuffer(this.vertBuffer,   0,    <ArrayBuffer>model);
-          this.device.queue.writeBuffer(this.vertBuffer,   192,  <ArrayBuffer>normal);
-  
-          renderPass.setPipeline(this.floorPipeline);
-          renderPass.setBindGroup(0, this.floorBindGroup);
-          renderPass.setVertexBuffer(0, this.floor.buffer);
-          renderPass.draw(this.floor.idxCount, 1, 0, 0);
+        this.device.queue.writeBuffer(this.vertBuffer,   0,    <ArrayBuffer>model);
+        this.device.queue.writeBuffer(this.vertBuffer,   192,  <ArrayBuffer>normal);
 
-          var model : mat4 = this.blade.getModelMatrix();
-          var normal : mat4 = mat4.create();
-          mat4.invert(normal, model);
-          mat4.transpose(normal, normal);
+        //Rendering Skybox
+        renderPass.setPipeline(this.skyBoxPipeline);
+        renderPass.setBindGroup(0, this.skyBoxBindGroup);
+        renderPass.setVertexBuffer(0, this.skyBoxPosBuffer);
+        renderPass.setVertexBuffer(1, this.skyBoxTexCoordBuffer);
+        renderPass.setVertexBuffer(2, this.skyBoxTexIdBuffer);
+        renderPass.setIndexBuffer(this.skyBoxIdxBuffer, 'uint32');
+        renderPass.drawIndexed(36, 1, 0, 0);
 
-          // DRAWING GRASS
-          this.device.queue.writeBuffer(this.vertBuffer,   0,    <ArrayBuffer>model);
-          this.device.queue.writeBuffer(this.vertBuffer,   192,  <ArrayBuffer>normal);
 
-          renderPass.setPipeline(this.grassPipeline);
-          renderPass.setBindGroup(0, this.bindGroup);
-          renderPass.setBindGroup(1, this.grassBindGroup);
-          renderPass.setVertexBuffer(0, this.blade.buffer);
-          renderPass.draw(this.blade.idxCount, this.numInstances, 0, 0);
+        // DRAWING FLOOR
+        this.resetVertBuffer(this.floor);
+        renderPass.setPipeline(this.floorPipeline);
+        renderPass.setBindGroup(0, this.floorBindGroup);
+        renderPass.setVertexBuffer(0, this.floor.buffer);
+        renderPass.draw(this.floor.idxCount, 1, 0, 0);
 
-        //   var model : mat4 = this.mesh.getModelMatrix();
-        //   var normal : mat4 = mat4.create();
-        //   mat4.invert(normal, model);
-        //   mat4.transpose(normal, normal);
+        // DRAWING GRASS
+        this.resetVertBuffer(this.blade);
+        renderPass.setPipeline(this.grassPipeline);
+        renderPass.setBindGroup(0, this.bindGroup);
+        renderPass.setBindGroup(1, this.grassBindGroup);
+        renderPass.setVertexBuffer(0, this.blade.buffer);
+        renderPass.draw(this.blade.idxCount, this.numInstances, 0, 0);
 
-        //   this.device.queue.writeBuffer(this.vertBuffer,   0,    <ArrayBuffer>model);
-        //   this.device.queue.writeBuffer(this.vertBuffer,   192,  <ArrayBuffer>normal);
+        this.resetVertBuffer(this.mesh);
+        renderPass.setPipeline(this.genericPipeline);
+        renderPass.setBindGroup(0, this.bindGroup);
+        renderPass.setVertexBuffer(0, this.mesh.buffer);
+        renderPass.draw(this.mesh.idxCount, 1, 0, 0);  
 
-          renderPass.setPipeline(this.genericPipeline);
-          renderPass.setBindGroup(0, this.bindGroup);
-          renderPass.setVertexBuffer(0, this.mesh.buffer);
-          renderPass.draw(this.mesh.idxCount, 1, 0, 0);  
-
-          renderPass.end();
-          this.device.queue.submit([commandEncoder0.finish()]);
-          this.timeData[0] += 0.01;
-          this.device.queue.writeBuffer(this.timeBuffer,   0,    this.timeData );
+        renderPass.end();
+        this.device.queue.submit([commandEncoder0.finish()]);
+        this.timeData[0] += 0.01;
+        this.device.queue.writeBuffer(this.timeBuffer,   0,    this.timeData );
     }
 }
