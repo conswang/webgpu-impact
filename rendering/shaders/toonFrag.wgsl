@@ -15,7 +15,8 @@ fn fs_main(
     @location(2) NormalizedPos : vec4<f32>
 ) -> @location(0) vec4<f32> {
     var textureColor : vec4<f32> = textureSample(texture, textureSampler, UV);
-    var lambert : f32 = max(dot(normalize(Normal.xyz), normalize(uniforms.lightPos.xyz - Position.xyz)), 0.0);
+    var lambert : f32 = max(dot(normalize(Normal.xyz), normalize(uniforms.eyePos.xyz - Position.xyz)), 0.0);
+    // lambert = 0.0;
     var ambient : f32 = 0.25; 
 
     var toonDim : f32 = 10.0;
@@ -23,5 +24,5 @@ fn fs_main(
     finalcolor *= toonDim;
     finalcolor = vec3<f32> (floor(finalcolor.x)/toonDim, floor(finalcolor.y)/toonDim, floor(finalcolor.z)/toonDim);
 
-    return vec4<f32>(finalcolor, 1.0);
+    return vec4<f32>(uniforms.eyePos.xyz, 1.0);
 }

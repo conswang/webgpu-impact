@@ -98,7 +98,7 @@ export class Instancer {
 
         this.createAssets();
 
-        await this.mesh.createTexture(this.device, "https://imgs.smoothradio.com/images/191589?width=1200&crop=1_1&signature=KHg-WnaLlH9KsZwE-qYgxTkaSpU=");
+        await this.mesh.createTexture(this.device, "./marbleThingy.jpg");
 
         this.depthTexture = this.device.createTexture({
             size: this.presentationSize,
@@ -336,13 +336,13 @@ export class Instancer {
 
         /** Is it texture time? I think it's texture time. **/
         //Writing Texture Data to a Texture
-        let imgs = [ 'https://imgs.smoothradio.com/images/191589?width=1200&crop=1_1&signature=KHg-WnaLlH9KsZwE-qYgxTkaSpU=', 
-                     'https://imgs.smoothradio.com/images/191589?width=1200&crop=1_1&signature=KHg-WnaLlH9KsZwE-qYgxTkaSpU=',
-                     'https://imgs.smoothradio.com/images/191589?width=1200&crop=1_1&signature=KHg-WnaLlH9KsZwE-qYgxTkaSpU=',
-                     'https://imgs.smoothradio.com/images/191589?width=1200&crop=1_1&signature=KHg-WnaLlH9KsZwE-qYgxTkaSpU=',
-                     'https://imgs.smoothradio.com/images/191589?width=1200&crop=1_1&signature=KHg-WnaLlH9KsZwE-qYgxTkaSpU=',
-  		             'https://imgs.smoothradio.com/images/191589?width=1200&crop=1_1&signature=KHg-WnaLlH9KsZwE-qYgxTkaSpU='
-                    ]; 
+        let imgs = [ './blueSky.jpg', 
+                    './blueSky.jpg',
+                    './blueSky.jpg',
+                    './blueSky.jpg',
+                    './blueSky.jpg',
+                    './blueSky.jpg'
+                ]; 
         
         const skyTexture = this.device.createTexture({
             size: [1024, 1024, 6],
@@ -432,6 +432,8 @@ export class Instancer {
         this.floor = new Mesh({col: true, nor: false, uv: false});
         this.mesh = new Mesh({col: false, nor: true, uv: true});
 
+        this.mesh.scaleMesh(vec3.fromValues(2.0, 4.0, 2.0));
+
         this.blade.createBlade();
         this.floor.createPlane();
         this.mesh.createCube();
@@ -503,7 +505,7 @@ export class Instancer {
                 },
                 {
                     binding: 1,
-                    visibility: GPUShaderStage.FRAGMENT,
+                    visibility: GPUShaderStage.FRAGMENT | GPUShaderStage.VERTEX,
                     buffer: {}
                 },
                 {
@@ -798,11 +800,21 @@ export class Instancer {
         this.device.queue.writeBuffer(this.vertBuffer,   64,   <ArrayBuffer>this.camera.view());
         this.device.queue.writeBuffer(this.vertBuffer,   128,  <ArrayBuffer>this.camera.project());
 
-        var lightPos = new Float32Array(4);
-        lightPos[0] = 0.0; lightPos[1] = 5.0; lightPos[2] = 0.0;lightPos[3] =  1.0;
+        var lightVec : vec4 = vec4.fromValues(0.0, -5.0, 0.0, 1.0);
 
-        var eyePos: Float32Array = new Float32Array(4);
-        eyePos[0] = this.camera.eye[0]; eyePos[1] = this.camera.eye[1]; eyePos[2] = this.camera.eye[2];
+        var lightPos = new Float32Array(4);
+        lightPos[0] = lightVec[0]; lightPos[1] = lightVec[1]; lightPos[2] = lightVec[2];lightPos[3] = lightVec[3];
+
+        var eyeVec : vec4 = vec4.fromValues(this.camera.eye[0], this.camera.eye[1], this.camera.eye[2], 1.0);
+        var viewProj : mat4 = mat4.create();
+        // mat4.identity(viewProj);
+        // mat4.mul(viewProj, this.mesh.getModelMatrix(), viewProj);
+        // mat4.mul(viewProj, this.camera.view(), viewProj);
+        // mat4.mul(viewProj, this.camera.project(), viewProj);
+        // vec4.transformMat4(eyeVec, eyeVec, viewProj);
+        eyeVec = vec4.fromValues(0.0, 0.0, 0.0, 0.0);
+        var eyePos : Float32Array = new Float32Array(4);
+        eyePos[0] = eyeVec[0]; eyePos[1] = eyeVec[1]; eyePos[2] = eyeVec[2];
         eyePos[3] =  1.0;
 
         this.device.queue.writeBuffer(this.fragBuffer, 0, <ArrayBuffer>lightPos);

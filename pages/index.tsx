@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Renderer } from "../rendering/renderer";
 import { Instancer } from "../rendering/instancer";
 import { inputs } from "../rendering/types/inputs";
+import { loadGLTF } from "../rendering/types/gltfLoader";
 
 export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -111,6 +112,8 @@ function onKeyUp(event : KeyboardEvent)
     }
     console.log(inputs)
 }
+
+loadGLTF();
 
   return <div>
     <div>

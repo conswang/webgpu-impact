@@ -5,6 +5,13 @@ struct TransformData {
     normal: mat4x4<f32>
 };
 
+struct Uniforms {
+            lightPos : vec4<f32>, 
+            eyePos : vec4<f32>,
+        };
+
+
+@binding(1) @group(0) var<uniform> uniforms: Uniforms;
 @binding(0) @group(0) var<uniform> transform: TransformData;
 
 struct Fragment {

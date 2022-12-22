@@ -18,14 +18,14 @@ export class Texture {
 
     async create(device: GPUDevice) {
         const img = document.createElement('img');
-        img.src = new URL(
-            this.filepath!, 
-            import.meta.url
-            ).toString();
-        await img.decode();
+        // img.src = new URL(
+        //     this.filepath!, 
+        //     import.meta.url
+        //     ).toString();
+        // await img.decode();
         
         // Wait for image to load
-        const resp = await fetch(this.filepath!);
+        const resp = await fetch(this.filepath);
         if (!resp.ok) {
             return console.error("Network error", resp.status);
         }

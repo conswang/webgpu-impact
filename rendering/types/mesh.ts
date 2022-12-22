@@ -31,6 +31,7 @@ export class Mesh {
 
     translate: vec3 = vec3.create()
     rotate: vec3 = vec3.create()
+    scale: vec3 = vec3.fromValues(1.0, 1.0, 1.0)
 
     constructor(layout: VertexLayout) {
         this.layout = layout;
@@ -39,6 +40,9 @@ export class Mesh {
     rotateMesh() {
         // vec3.rotateY(this.rotate, this.rotate, [0, 0, 0], 0.01);
         this.rotate[1] += 0.01;
+    }
+    scaleMesh(scale: vec3) {
+        this.scale = scale;
     }
 
     async createTexture(device: GPUDevice, filePath: string) {
@@ -225,6 +229,7 @@ export class Mesh {
 
     getModelMatrix() : mat4 {
         let model : mat4 = mat4.create();
+        mat4.scale(model, model, this.scale);
         mat4.rotate(model, model, this.rotate[0], [1, 0, 0]);
         mat4.rotate(model, model, this.rotate[1], [0, 1, 0]);
         mat4.rotate(model, model, this.rotate[2], [0, 0, 1]);
