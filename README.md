@@ -71,13 +71,14 @@ UV textured primitive with posterize shader:
 Grass Instance Rendering
 
 Grass with recovery forces:  
-![](images/CamMove.gif)
+
+![](images/recoveryForces.gif)
 
 **The remaining features are all in the MergeAttempt Branch**
 
 Interactive Camera
 ==================================
-![](images/skybox.gif)
+![](images/CamMove.gif)
 
 Quaternion-based interactive camera controlled by keys. (WASD for translation, Arrow Keys for Rotation)
 
@@ -104,4 +105,6 @@ Bloopers
 ==================================
 Depth buffer fail  
 ![](images/blooper1.gif)
+
+Skybox Fail
 ![](images/blooper2.png)
