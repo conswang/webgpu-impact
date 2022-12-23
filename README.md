@@ -65,27 +65,43 @@ We measured the performance of our compute pipeline relative to the number of bl
 
 Render Pipeline
 ==================================
-GLTF Loading
-
-UV Texturing
-
 UV textured primitive with posterize shader:  
 <img src="images/uvposterize.png" width="600">
 
 Grass Instance Rendering
 
 Grass with recovery forces:  
-![](images/recoveryForces.gif)
+![](images/CamMove.gif)
 
-### Test Scenes (Todo)
+**The remaining features are all in the MergeAttempt Branch**
+
+Interactive Camera
+==================================
+![](images/skybox.gif)
+
+Quaternion-based interactive camera controlled by keys. (WASD for translation, Arrow Keys for Rotation)
+
+Sky Box 
+==================================
+![](images/skybox.gif)
+
+6 textured planes that enclose the interactive camera eye position.
+
+Compute Clouds
+==================================
+![](images/computeCloud.gif)
+
+The noise and density approximations for clouds are calculated in a compute shader, written to a texture, and then that texture is drawn to the top face os the skybox
+Proposed future implementation of raymarched clouds integrated into a rasterized scene: [link](https://docs.google.com/document/d/17y9POT-lSiN-K3quoQ_PVPrY3xxe-jweNk1Djiy5Xfk/edit?usp=share_link).
 
 Future Direction
 ==================================
 - Animation & Skinning
-- Ray-marched Clouds
 - Improved Camera Functionality
+- GLTF Loading
 
 Bloopers
 ==================================
 Depth buffer fail  
 ![](images/blooper1.gif)
+![](images/blooper2.png)
