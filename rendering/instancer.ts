@@ -1,5 +1,7 @@
 import shader from "./shaders/instance.wgsl"
 import computeShader from "./shaders/compute.wgsl"
+import cloudShader from "./shaders/cloudCompute.wgsl"
+import skyQuadShader from "./shaders/skyQuad.wgsl"
 import floorShader from "./shaders/floor.wgsl"
 import vertShader from "./shaders/vert.wgsl"
 import fragShader from "./shaders/frag.wgsl"
@@ -61,6 +63,9 @@ export class Instancer {
     grassBindGroup: GPUBindGroup;
     skyBoxBindGroup: GPUBindGroup;
     computeBindGroup: GPUBindGroup;
+    cloudComputeBindGroup: GPUBindGroup;
+    skyQuadBindGroup: GPUBindGroup;
+
     
     // Pipelines
     genericPipeline: GPURenderPipeline;
@@ -68,7 +73,9 @@ export class Instancer {
     floorPipeline: GPURenderPipeline;
     skyBoxPipeline: GPURenderPipeline
     computePipeline: GPUComputePipeline;
-    
+    skyCompPipeline: GPUComputePipeline;
+    skyQuadPipeline: GPURenderPipeline;
+
     numInstances: number;
     forces: vec3;
     timeData:  Float32Array
@@ -77,11 +84,12 @@ export class Instancer {
     // Depth and Color Textures
     depthTexture!: GPUTexture;
     colorTexture!: GPUTexture;  
+    cloudTexture: GPUTexture;
 
     skyBoxTextureView: GPUTextureView;
 
     // MSAA
-    samples: number = 4
+    samples: number = 1;
 
     constructor(canvas: HTMLCanvasElement){
         this.canvas = canvas;
@@ -116,6 +124,7 @@ export class Instancer {
 
         await this.setup();
         await this.setupSkyBox();
+        await this.setCloudCompute();
 
         await this.makePipeline();
 
@@ -267,6 +276,65 @@ export class Instancer {
         });
     }
 
+    async setCloudCompute(){
+        this.cloudTexture  = this.device.createTexture({
+              size: {
+                width: 100,
+                height: 100,
+              },
+              format: 'rgba8unorm',
+
+              usage:
+                GPUTextureUsage.COPY_DST |
+                GPUTextureUsage.STORAGE_BINDING |
+                GPUTextureUsage.TEXTURE_BINDING,
+        });
+  
+        const cloudComputeBindGroupLayout = this.device.createBindGroupLayout({
+            entries: [ 
+                    {binding: 0, visibility: GPUShaderStage.COMPUTE,
+                                 storageTexture: {
+                                    viewDimension: "2d",
+                                    format: 'rgba8unorm',
+                                    access: 'write-only'
+                                 }},
+                    {binding: 1, visibility: GPUShaderStage.COMPUTE,
+                                    buffer: {}}
+                   ]
+        });
+  
+        this.cloudComputeBindGroup = this.device.createBindGroup({
+            layout: cloudComputeBindGroupLayout,
+            entries: [
+                {
+                    binding: 0,
+                    resource: this.cloudTexture.createView({
+                        format: "rgba8unorm",
+                        dimension: '2d'
+                    }),
+                },
+                {
+                    binding: 1,
+                    resource: {buffer: this.timeBuffer}
+                } 
+            ]
+        })
+  
+        const cloudComputePipelineLayout = this.device.createPipelineLayout({
+            bindGroupLayouts: [cloudComputeBindGroupLayout]
+        });
+  
+        this.skyCompPipeline = this.device.createComputePipeline({
+            layout: cloudComputePipelineLayout,
+            compute: {
+                module: this.device.createShaderModule({
+                    code: cloudShader,
+                }),
+                entryPoint: 'main',
+            }
+        });
+    }
+
     async setupSkyBox(){
         var positions =  new Float32Array([
             -30, 30, 30,  -30,-30, 30,   30,-30, 30,   30, 30, 30,    // front
@@ -366,7 +434,7 @@ export class Instancer {
           const imageCanvasContext = imageCanvas.getContext('2d');
           imageCanvasContext.drawImage(img, 0, 0, imageCanvas.width, imageCanvas.height);
           const imageData = imageCanvasContext.getImageData(0, 0, 1024, 1024);
-        
+
           for (let x=0; x<1024*1024*4; x++)
           {
              skyTextureData[1024*1024*4*i + x] = imageData.data[ x ];
@@ -388,12 +456,6 @@ export class Instancer {
             aspect: 'all',
             arrayLayerCount: 6
         });
-
-        //Skybox Specific Texture Sampler
-        let textureSampler = this.device.createSampler({
-            minFilter: "linear",
-            magFilter: "linear"
-        });
         /** End SkyBox buffers & textures **/
     }
 
@@ -406,7 +468,7 @@ export class Instancer {
         }
 
         this.context = <GPUCanvasContext> this.canvas.getContext("webgpu");
-        this.format = "bgra8unorm";
+        this.format = "rgba8unorm";
 
         this.context.configure({
             device: this.device,
@@ -658,6 +720,82 @@ export class Instancer {
             }
         });
 
+        /*SKY QUAD*/
+        const skyQuadBindGroupLayout = this.device.createBindGroupLayout({
+            entries: [
+                {
+                    binding: 0, 
+                    visibility: GPUShaderStage.FRAGMENT, 
+                    sampler: {}
+                },
+                {
+                    binding: 1, 
+                    visibility: GPUShaderStage.FRAGMENT, 
+                    texture: {
+                        sampleType: "float",
+                        viewDimension: "2d"
+                    }
+                }
+            ]
+        });
+
+        this.skyQuadBindGroup = this.device.createBindGroup({
+            layout: skyQuadBindGroupLayout,
+            entries: [
+              {
+                binding: 0,
+                resource: sampler,
+              },
+              {
+                binding: 1,
+                resource: this.cloudTexture.createView({
+                    format: "rgba8unorm",
+                    dimension: '2d'
+                }),
+              },
+            ],
+          });
+
+        let skyQuadRenderPipelineLayout = this.device.createPipelineLayout({
+            bindGroupLayouts: [skyQuadBindGroupLayout]
+        })
+
+        this.skyQuadPipeline = this.device.createRenderPipeline({
+            layout: skyQuadRenderPipelineLayout,
+            vertex: {
+              module: this.device.createShaderModule({
+                code: skyQuadShader,
+              }),
+              entryPoint: 'vs_main',
+            },
+            fragment: {
+              module: this.device.createShaderModule({
+                code: skyQuadShader,
+              }),
+              entryPoint: 'fs_main',
+              targets: [
+                {
+                  format: this.format,
+                },
+              ],
+            },
+            primitive: { 
+                topology  : 'triangle-list',
+                frontFace : "ccw",
+                cullMode  : 'none',
+                stripIndexFormat: undefined 
+            },
+            depthStencil: {
+                depthWriteEnabled: true,
+                depthCompare: "less",
+                format: "depth24plus"
+            },
+            multisample: {
+                count: this.samples
+            }
+        });
+
+        //Sky box bindgroups
         const skyBoxBindGroupLayout = this.device.createBindGroupLayout({
             entries: [
                 {
@@ -697,12 +835,12 @@ export class Instancer {
                 {
                     binding: 2, 
                     resource: this.skyBoxTextureView
-                }
+                }            
             ]
         });
 
         const skyBoxPipelineLayout = this.device.createPipelineLayout({
-            bindGroupLayouts: [skyBoxBindGroupLayout]
+            bindGroupLayouts: [skyBoxBindGroupLayout, skyQuadBindGroupLayout]
         });
 
 
@@ -763,7 +901,6 @@ export class Instancer {
                 count: this.samples
             }
         });
-
 
     }
 
@@ -827,9 +964,14 @@ export class Instancer {
         //const textureView : GPUTextureView = this.context.getCurrentTexture().createView();
         
         const computePass = commandEncoder.beginComputePass();
+
+        computePass.setPipeline(this.skyCompPipeline);
+        computePass.setBindGroup(0, this.cloudComputeBindGroup);
+        computePass.dispatchWorkgroups(64);
+        
         computePass.setPipeline(this.computePipeline);
         computePass.setBindGroup(0, this.computeBindGroup);
-        computePass.dispatchWorkgroups(64);
+        computePass.dispatchWorkgroups(256);
         computePass.end();
         
         commandEncoder.copyBufferToBuffer(
@@ -874,12 +1016,18 @@ export class Instancer {
         //Rendering Skybox
         renderPass.setPipeline(this.skyBoxPipeline);
         renderPass.setBindGroup(0, this.skyBoxBindGroup);
+        renderPass.setBindGroup(1, this.skyQuadBindGroup);
         renderPass.setVertexBuffer(0, this.skyBoxPosBuffer);
         renderPass.setVertexBuffer(1, this.skyBoxTexCoordBuffer);
         renderPass.setVertexBuffer(2, this.skyBoxTexIdBuffer);
         renderPass.setIndexBuffer(this.skyBoxIdxBuffer, 'uint32');
         renderPass.drawIndexed(36, 1, 0, 0);
 
+        
+        // DRAWING Sky
+        //renderPass.setPipeline(this.skyQuadPipeline);
+        //renderPass.setBindGroup(0, this.skyQuadBindGroup);
+        //renderPass.draw(6, 1, 0, 0);
 
         // DRAWING FLOOR
         this.resetVertBuffer(this.floor);

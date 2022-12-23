@@ -7,6 +7,9 @@ struct TransformData {
 @binding(0) @group(0) var<uniform> transform: TransformData;
 @binding(1) @group(0) var mySampler: sampler;
 @binding(2) @group(0) var myTexture: texture_2d_array<f32>;
+@binding(1) @group(1) var myTexture2: texture_2d<f32>;
+@binding(0) @group(1) var mySampler2: sampler;
+
 
 struct VSOut {
     @builtin(position) Position: vec4<f32>,
@@ -41,5 +44,12 @@ fn fs_main( @location(0) uvs    : vec2<f32>,
     {
     	return vec4<f32>(1.0, 0.0, 0.0, 1.0);
     }
-    return textureSample(myTexture, mySampler, uvs, tid );
+
+    if (tid != 5){
+        return textureSample(myTexture, mySampler, uvs, tid );    
+    } else {
+        return textureSample(myTexture2, mySampler, uvs);
+    }
+
+    
 }
